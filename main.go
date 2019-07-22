@@ -7,6 +7,8 @@ import (
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+
+	"github.com/novikovSU/rocketchat-desktop-native/appconf"
 )
 
 const (
@@ -98,6 +100,17 @@ func main() {
 	contactList.SetHeadersVisible(false)
 	leftBox.PackStart(contactList, true, true, 5)
 
+	addAccBtn, err := gtk.ButtonNewWithLabel("Add account")
+	if err != nil {
+		log.Fatal(err)
+	}
+	leftBox.PackStart(addAccBtn, false, false, 0)
+
+	addAccBtn.Connect("clicked", func() {
+		appconf.GetConfig().Accounts = append(appconf.GetConfig().Accounts, appconf.Account{"http://example.com/chat", "Иванов Иван", "pswd"})
+		appconf.StoreConfig()
+	})
+	
 	connectButton, err := gtk.ButtonNewWithLabel("Connect")
 	if err != nil {
 		log.Fatal(err)
