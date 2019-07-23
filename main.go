@@ -1,22 +1,30 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"log"
+	"os"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
 
+const appID = "com.github.novikovSU.rocketchat-desktop-native"
+
 const (
 	iistItem = iota
 	nColumns
-	KEY_ENTER = 65293
+	keyEnter    = 65293
+	senderConst = "Полиграфов Полиграф"
 )
 
 var (
-	CtrlPressed = false
+	ctrlPressed = false
 )
 
 func initList(list *gtk.TreeView) *gtk.ListStore {
@@ -25,7 +33,7 @@ func initList(list *gtk.TreeView) *gtk.ListStore {
 		log.Fatal(err)
 	}
 
-	column, err := gtk.TreeViewColumnNewWithAttribute("List Items", cellRenderer, "text", 0)
+	column, err := gtk.TreeViewColumnNewWithAttribute("List Items", cellRenderer, "markup", 0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,147 +74,300 @@ func onChanged(selection *gtk.TreeSelection, label *gtk.Label) {
 	}
 }
 
+func getSelectionText(selection *gtk.TreeSelection) (selectionText string) {
+	var iter *gtk.TreeIter
+	var model gtk.ITreeModel
+	var ok bool
+	model, iter, ok = selection.GetSelected()
+
+	if ok {
+		value, err := model.(*gtk.TreeModel).GetValue(iter, 0)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		text, err := value.GetString()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		selectionText = text
+	}
+
+	return
+}
+
+func isWindow(obj glib.IObject) (*gtk.Window, error) {
+	// Make type assertion (as per gtk.go).
+	if win, ok := obj.(*gtk.Window); ok {
+		return win, nil
+	}
+	return nil, errors.New("not a *gtk.Window")
+}
+
+// onMainWindowDestory is the callback that is linked to the
+// on_main_window_destroy handler. It is not required to map this,
+// and is here to simply demo how to hook-up custom callbacks.
+func onMainWindowDestroy() {
+	log.Println("onMainWindowDestroy")
+}
+
 func main() {
-	gtk.Init(nil)
-
-	win, err := gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
+	// Create a new application.
+	app, err := gtk.ApplicationNew(appID, glib.APPLICATION_FLAGS_NONE)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
-	win.SetPosition(gtk.WIN_POS_CENTER)
-	win.SetDefaultSize(800, 600)
-	win.SetTitle("Rockaet.Chat Desktop native")
+	// Connect function to application startup event, this is not required.
+	app.Connect("startup", func() {
+		log.Println("application startup")
+	})
 
-	mainBox, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Connect function to application activate event
+	app.Connect("activate", func() {
+		log.Println("application activate")
 
-	// -----------
+		notif := glib.NotificationNew("Rocket.Chat Desktop native")
+		notif.SetBody("application activate")
+		app.SendNotification(appID, notif)
 
-	leftBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
-	if err != nil {
-		log.Fatal(err)
-	}
-	//leftBox.Set
+		// Get the GtkBuilder UI definition in the glade file.
+		builder, err := gtk.BuilderNewFromFile("main.glade")
+		if err != nil {
+			log.Panic(err)
+		}
 
-	contactList, err := gtk.TreeViewNew()
-	if err != nil {
-		log.Fatal(err)
-	}
-	contactList.SetHeadersVisible(false)
-	leftBox.PackStart(contactList, true, true, 5)
+		// Map the handlers to callback functions, and connect the signals
+		// to the Builder.
+		signals := map[string]interface{}{
+			"on_main_window_destroy": onMainWindowDestroy,
+		}
+		builder.ConnectSignals(signals)
 
-	connectButton, err := gtk.ButtonNewWithLabel("Connect")
-	if err != nil {
-		log.Fatal(err)
-	}
-	leftBox.PackStart(connectButton, false, false, 0)
+		// Get the object with the id of "main_window".
+		obj, err := builder.GetObject("main_window")
+		if err != nil {
+			log.Panic(err)
+		}
 
-	disconnectButton, err := gtk.ButtonNewWithLabel("Disconnect")
-	if err != nil {
-		log.Fatal(err)
-	}
-	leftBox.PackStart(disconnectButton, false, false, 0)
+		// Verify that the object is a pointer to a gtk.ApplicationWindow.
+		win, err := isWindow(obj)
+		if err != nil {
+			log.Panic(err)
+		}
 
-	// -------------
+		// Create menu
+		// Create a header bar
+		header, err := gtk.HeaderBarNew()
+		if err != nil {
+			log.Fatal("Could not create header bar:", err)
+		}
+		header.SetShowCloseButton(true)
+		header.SetTitle("Rocket.Chat Desktop Native")
+		header.SetSubtitle("Do we need a subtitle?")
 
-	chatList, err := gtk.TreeViewNew()
-	if err != nil {
-		log.Fatal(err)
-	}
-	chatList.SetHeadersVisible(false)
+		// Create a new menu button
+		mbtn, err := gtk.MenuButtonNew()
+		if err != nil {
+			log.Fatal("Could not create menu button:", err)
+		}
 
-	rightBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
-	if err != nil {
-		log.Fatal(err)
-	}
-	rightBox.PackStart(chatList, true, true, 5)
+		// Set up the menu model for the button
+		menu := glib.MenuNew()
+		if menu == nil {
+			log.Fatal("Could not create menu (nil)")
+		}
+		// Actions with the prefix 'app' reference actions on the application
+		// Actions with the prefix 'win' reference actions on the current window (specific to ApplicationWindow)
+		// Other prefixes can be added to widgets via InsertActionGroup
+		menu.Append("Connect", "custom.connect")
+		menu.Append("Disconnect", "custom.disconnect")
+		menu.Append("Quit", "app.quit")
 
-	textInput, err := gtk.TextViewNew()
-	if err != nil {
-		log.Fatal(err)
-	}
-	rightBox.PackStart(textInput, false, false, 5)
+		// Create the action "win.close"
+		aClose := glib.SimpleActionNew("close", nil)
+		aClose.Connect("activate", func() {
+			win.Close()
+		})
+		app.AddAction(aClose)
 
-	// ------------------
+		customActionGroup := glib.SimpleActionGroupNew()
+		win.InsertActionGroup("custom", customActionGroup)
 
-	mainBox.PackStart(leftBox, true, true, 5)
-	mainBox.PackStart(rightBox, true, true, 5)
+		// Create an action in the custom action group
+		aConnect := glib.SimpleActionNew("connect", nil)
+		aConnect.Connect("activate", func() {
+			log.Println("CONNECTED")
+		})
+		customActionGroup.AddAction(aConnect)
+		app.AddAction(aConnect)
 
-	win.Add(mainBox)
+		aDisconnect := glib.SimpleActionNew("disconnect", nil)
+		aDisconnect.Connect("activate", func() {
+			log.Println("DISCONNECTED")
+		})
+		customActionGroup.AddAction(aDisconnect)
+		app.AddAction(aDisconnect)
 
-	contactsStore := initList(contactList)
-	addToList(contactsStore, "Иванов Иван")
-	addToList(contactsStore, "Петров Петр")
-	addToList(contactsStore, "Сидоров Сидор")
-	addToList(contactsStore, "Иванов Иван")
-	addToList(contactsStore, "Петров Петр")
+		mbtn.SetMenuModel(&menu.MenuModel)
 
-	chatStore := initList(chatList)
-	addToList(chatStore, "Вы вошли в чат.")
-	addToList(chatStore, "11:12 Иванов Иван: строка 1\nстрока 2\nстрока 3")
-	addToList(chatStore, "---")
-	addToList(chatStore, "Иванов Иван")
-	addToList(chatStore, "Петров Петр")
+		// add the menu button to the header
+		header.PackStart(mbtn)
 
-	/*	contactsSelection, err := contactList.GetSelection()
+		// Assemble the window
+		win.SetTitlebar(header)
+
+		// Add Quit action to menu
+		aQuit := glib.SimpleActionNew("quit", nil)
+		aQuit.Connect("activate", func() {
+			app.Quit()
+		})
+		app.AddAction(aQuit)
+
+		// Add action for X-button
+		win.Connect("destroy", app.Quit)
+
+		// END creating menu
+
+		obj, err = builder.GetObject("contact_list")
+		if err != nil {
+			log.Fatal(err)
+		}
+		contactList, ok := obj.(*gtk.TreeView)
+		if ok != true {
+			log.Fatal(err)
+		}
+
+		// -------------
+
+		obj, err = builder.GetObject("chat_caption")
+		if err != nil {
+			log.Fatal(err)
+		}
+		chatCaption, ok := obj.(*gtk.Label)
+		if ok != true {
+			log.Fatal(err)
+		}
+
+		obj, err = builder.GetObject("chat_list")
+		if err != nil {
+			log.Fatal(err)
+		}
+		chatList, ok := obj.(*gtk.TreeView)
+		if ok != true {
+			log.Fatal(err)
+		}
+
+		// Autoscroll of chatList
+		obj, err = builder.GetObject("right_scrolled_window")
+		if err != nil {
+			log.Fatal(err)
+		}
+		rightScrolledWindow, ok := obj.(*gtk.ScrolledWindow)
+		if ok != true {
+			log.Fatal(err)
+		}
+		chatList.Connect("size-allocate", func() {
+			adj := rightScrolledWindow.GetVAdjustment()
+			adj.SetValue(adj.GetUpper() - adj.GetPageSize())
+		})
+
+		obj, err = builder.GetObject("text_input")
+		if err != nil {
+			log.Fatal(err)
+		}
+		textInput, ok := obj.(*gtk.TextView)
+		if ok != true {
+			log.Fatal(err)
+		}
+
+		// ------------------
+
+		contactsStore := initList(contactList)
+		addToList(contactsStore, "#general")
+		addToList(contactsStore, "#rocket-native")
+		addToList(contactsStore, "Иванов Иван")
+		addToList(contactsStore, "Петров Петр")
+		addToList(contactsStore, "Сидоров Сидор")
+		addToList(contactsStore, "Иванов Иван")
+		addToList(contactsStore, "Петров Петр")
+
+		chatStore := initList(chatList)
+		addToList(chatStore, "<i>--- Вы вошли в чат. ---</i>")
+
+		contactsSelection, err := contactList.GetSelection()
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		contactsSelection.Connect("changed", func() {
-			onChanged(contactsSelection, leftLabel)
+			//onChanged(contactsSelection, chatCaption)
+			selectionText := getSelectionText(contactsSelection)
+			header.SetSubtitle(selectionText)
+			chatCaption.SetText(selectionText)
+		})
+
+		/*chatSelection, err := chatList.GetSelection()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		chatSelection.Connect("changed", func() {
+			onChanged(chatSelection, rightLabel)
 		}) */
 
-	/*chatSelection, err := chatList.GetSelection()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	chatSelection.Connect("changed", func() {
-		onChanged(chatSelection, rightLabel)
-	}) */
-
-	textInput.Connect("key-press-event", func(tv *gtk.TextView, ev *gdk.Event) {
-		keyEvent := &gdk.EventKey{ev}
-		switch keyEvent.KeyVal() {
-		case gdk.KEY_Control_L, gdk.KEY_Control_R:
-			CtrlPressed = true
-		}
-	})
-
-	textInput.Connect("key-release-event", func(tv *gtk.TextView, ev *gdk.Event) {
-		keyEvent := &gdk.EventKey{ev}
-		switch keyEvent.KeyVal() {
-		case KEY_ENTER:
-			if !CtrlPressed {
-				buffer, err := tv.GetBuffer()
-				if err != nil {
-					log.Fatal("Unable to get buffer:", err)
-				}
-				start, end := buffer.GetBounds()
-
-				text, err := buffer.GetText(start, end, true)
-				if err != nil {
-					log.Fatal("Unable to get text:", err)
-				}
-				text = strings.TrimSuffix(text, "\n")
-				addToList(chatStore, text)
-
-				buffer.SetText("")
+		textInput.Connect("key-press-event", func(tv *gtk.TextView, ev *gdk.Event) {
+			keyEvent := &gdk.EventKey{ev}
+			switch keyEvent.KeyVal() {
+			case gdk.KEY_Control_L, gdk.KEY_Control_R:
+				ctrlPressed = true
 			}
-			break
-		case gdk.KEY_Control_L, gdk.KEY_Control_R:
-			CtrlPressed = false
-		default:
-			//log.Printf("Keycode: %d\n", keyEvent.KeyVal())
-		}
+		})
+
+		textInput.Connect("key-release-event", func(tv *gtk.TextView, ev *gdk.Event) {
+			keyEvent := &gdk.EventKey{ev}
+			switch keyEvent.KeyVal() {
+			case keyEnter:
+				if !ctrlPressed {
+					buffer, err := tv.GetBuffer()
+					if err != nil {
+						log.Fatal("Unable to get buffer:", err)
+					}
+					start, end := buffer.GetBounds()
+
+					inputText, err := buffer.GetText(start, end, true)
+					if err != nil {
+						log.Fatal("Unable to get text:", err)
+					}
+					inputText = strings.TrimSuffix(inputText, "\n")
+
+					match, _ := regexp.MatchString("^(\\s*)$", inputText)
+					if !match {
+						now := time.Now()
+						timeText := now.Format("2006-01-02 15:04:05")
+						text := fmt.Sprintf("<b>%s</b> <i>%s</i>\n%s", senderConst, timeText, inputText)
+						addToList(chatStore, text)
+						buffer.SetText("")
+					}
+				}
+				break
+			case gdk.KEY_Control_L, gdk.KEY_Control_R:
+				ctrlPressed = false
+			default:
+				//log.Printf("Keycode: %d\n", keyEvent.KeyVal())
+			}
+		})
+
+		win.ShowAll()
+		app.AddWindow(win)
 	})
 
-	win.Connect("destroy", gtk.MainQuit)
+	// Connect function to application shutdown event, this is not required.
+	app.Connect("shutdown", func() {
+		log.Println("application shutdown")
+	})
 
-	win.ShowAll()
-	gtk.Main()
+	// Launch the application
+	os.Exit(app.Run(os.Args))
 }
