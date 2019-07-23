@@ -2,26 +2,51 @@
 <!-- Generated with glade 3.22.1 -->
 <interface>
   <requires lib="gtk+" version="3.20"/>
-  <object class="GtkWindow" id="window_main">
-    <property name="title" translatable="yes">Пример Glade</property>
+  <object class="GtkWindow" id="main_window">
+    <property name="width_request">800</property>
+    <property name="height_request">600</property>
     <property name="can_focus">False</property>
+    <property name="title" translatable="yes">Rockaet.Chat Desktop native</property>
+    <property name="icon_name">rocketchat-desktop</property>
     <child>
       <placeholder/>
     </child>
     <child>
-      <object class="GtkBox">
+      <object class="GtkBox" id="main_box">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
-        <property name="margin_left">10</property>
-        <property name="margin_right">10</property>
-        <property name="margin_top">10</property>
-        <property name="margin_bottom">10</property>
-        <property name="orientation">vertical</property>
-        <property name="spacing">10</property>
         <child>
-          <object class="GtkEntry" id="entry_1">
+          <object class="GtkBox" id="left_box">
+            <property name="width_request">200</property>
             <property name="visible">True</property>
-            <property name="can_focus">True</property>
+            <property name="can_focus">False</property>
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkScrolledWindow" id="left_scrolled_window">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="shadow_type">in</property>
+                <child>
+                  <object class="GtkTreeView" id="contact_list">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="margin_left">5</property>
+                    <property name="margin_right">5</property>
+                    <property name="margin_top">5</property>
+                    <property name="margin_bottom">5</property>
+                    <property name="headers_visible">False</property>
+                    <child internal-child="selection">
+                      <object class="GtkTreeSelection"/>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -30,28 +55,86 @@
           </packing>
         </child>
         <child>
-          <object class="GtkButton" id="button_1">
-            <property name="label" translatable="yes">Go</property>
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="receives_default">True</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">1</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkLabel" id="label_1">
+          <object class="GtkBox" id="right_box">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">This is label</property>
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkLabel" id="chat_caption">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="halign">start</property>
+                <property name="margin_left">5</property>
+                <property name="margin_right">5</property>
+                <property name="margin_top">5</property>
+                <property name="xpad">15</property>
+                <property name="label" translatable="yes">User/Channel name</property>
+                <property name="single_line_mode">True</property>
+                <attributes>
+                  <attribute name="font-desc" value="FreeSans Semi-Bold 13"/>
+                </attributes>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkScrolledWindow" id="right_scrolled_window">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="hscrollbar_policy">never</property>
+                <property name="window_placement">bottom-left</property>
+                <property name="shadow_type">in</property>
+                <property name="overlay_scrolling">False</property>
+                <child>
+                  <object class="GtkTreeView" id="chat_list">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="margin_right">5</property>
+                    <property name="margin_top">5</property>
+                    <property name="vscroll_policy">natural</property>
+                    <property name="headers_visible">False</property>
+                    <child internal-child="selection">
+                      <object class="GtkTreeSelection"/>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkTextView" id="text_input">
+                <property name="height_request">60</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="events">GDK_KEY_PRESS_MASK | GDK_KEY_RELEASE_MASK | GDK_STRUCTURE_MASK</property>
+                <property name="tooltip_text" translatable="yes">Write something...</property>
+                <property name="margin_right">5</property>
+                <property name="margin_top">10</property>
+                <property name="margin_bottom">10</property>
+                <property name="border_width">1</property>
+                <property name="pixels_above_lines">1</property>
+                <property name="pixels_below_lines">1</property>
+                <property name="wrap_mode">word</property>
+                <property name="justification">fill</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
           </object>
           <packing>
-            <property name="expand">False</property>
+            <property name="expand">True</property>
             <property name="fill">True</property>
-            <property name="position">2</property>
+            <property name="position">1</property>
           </packing>
         </child>
       </object>
