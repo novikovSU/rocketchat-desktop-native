@@ -25,7 +25,9 @@ const (
 )
 
 var (
-	ctrlPressed = false
+	GtkApplication gtk.Application
+	GtkBuilder     gtk.Builder
+	ctrlPressed    = false
 )
 
 func initList(list *gtk.TreeView) *gtk.ListStore {
@@ -130,6 +132,7 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
+	GtkApplication = *app
 
 	// Connect function to application startup event, this is not required.
 	app.Connect("startup", func() {
@@ -144,35 +147,13 @@ func main() {
 		notif.SetBody("application activate")
 		app.SendNotification(appID, notif)
 
-		// Get the GtkBuilder UI definition in the glade file.
-		builder, err := gtk.BuilderNewFromFile("main.glade")
-		if err != nil {
-			log.Panic(err)
-		}
+		GtkBuilder = *createGtkBuilder()
+		win := CreateWindow("main_window")
 
-		// Map the handlers to callback functions, and connect the signals
-		// to the Builder.
-		signals := map[string]interface{}{
-			"on_main_window_destroy": onMainWindowDestroy,
-		}
-		builder.ConnectSignals(signals)
-
-		// Get the object with the id of "main_window".
-		obj, err := builder.GetObject("main_window")
-		if err != nil {
-			log.Panic(err)
-		}
-
-		// Verify that the object is a pointer to a gtk.ApplicationWindow.
-		win, err := isWindow(obj)
-		if err != nil {
-			log.Panic(err)
-		}
-
-		/* DISABLE custom header and menu
+		/* DISABLE custom header and menu */
 		// Create menu
 		// Get a headerbar
-		obj, err = builder.GetObject("main_header")
+		obj, err := GtkBuilder.GetObject("main_header")
 		if err != nil {
 			log.Panic(err)
 		}
@@ -183,7 +164,7 @@ func main() {
 		header.SetShowCloseButton(true)
 
 		// Create a new menu button
-		obj, err = builder.GetObject("main_menu_button")
+		obj, err = GtkBuilder.GetObject("main_menu_button")
 		if err != nil {
 			log.Panic(err)
 		}
@@ -204,13 +185,6 @@ func main() {
 		menu.Append("Disconnect", "custom.disconnect")
 		menu.Append("Quit", "app.quit")
 
-		// Create the action "win.close"
-		aClose := glib.SimpleActionNew("close", nil)
-		aClose.Connect("activate", func() {
-			win.Close()
-		})
-		app.AddAction(aClose)
-
 		customActionGroup := glib.SimpleActionGroupNew()
 		win.InsertActionGroup("custom", customActionGroup)
 
@@ -218,6 +192,7 @@ func main() {
 		aConnect := glib.SimpleActionNew("connect", nil)
 		aConnect.Connect("activate", func() {
 			log.Println("CONNECTED")
+			OpenConnectionWindow()
 		})
 		customActionGroup.AddAction(aConnect)
 		app.AddAction(aConnect)
@@ -248,9 +223,8 @@ func main() {
 		win.Connect("destroy", app.Quit)
 
 		// END creating menu
-		*/
 
-		obj, err = builder.GetObject("contact_list")
+		obj, err = GtkBuilder.GetObject("contact_list")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -261,7 +235,7 @@ func main() {
 
 		// -------------
 
-		obj, err = builder.GetObject("chat_caption")
+		obj, err = GtkBuilder.GetObject("chat_caption")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -270,7 +244,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		obj, err = builder.GetObject("chat_list")
+		obj, err = GtkBuilder.GetObject("chat_list")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -280,7 +254,7 @@ func main() {
 		}
 
 		// Autoscroll of chatList
-		obj, err = builder.GetObject("right_scrolled_window")
+		obj, err = GtkBuilder.GetObject("right_scrolled_window")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -296,7 +270,7 @@ func main() {
 
 		})
 
-		obj, err = builder.GetObject("text_input")
+		obj, err = GtkBuilder.GetObject("text_input")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -311,7 +285,6 @@ func main() {
 		fillContactList(contactsStore)
 
 		chatStore := initList(chatList)
-		addToList(chatStore, "<i>--- Вы вошли в чат. ---</i>")
 
 		contactsSelection, err := contactList.GetSelection()
 		if err != nil {
@@ -389,4 +362,45 @@ func main() {
 
 	// Launch the application
 	os.Exit(app.Run(os.Args))
+}
+
+func CreateWindow(id string) *gtk.Window {
+	obj, err := GtkBuilder.GetObject(id)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	wnd, err := isWindow(obj)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	// Create the action "wnd.close"
+	wndCloseAction := glib.SimpleActionNew("close", nil)
+	wndCloseAction.Connect("activate", func() {
+		wnd.Close()
+	})
+	GtkApplication.AddAction(wndCloseAction)
+
+	return wnd
+}
+
+func ttt(obj *glib.IObject) *gtk.Window {
+	return (*obj).(*gtk.Window)
+}
+
+func createGtkBuilder() *gtk.Builder {
+	// Get the GtkBuilder UI definition in the glade file.
+	builder, err := gtk.BuilderNewFromFile("main.glade")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	// Map the handlers to callback functions, and connect the signals to the Builder.
+	signals := map[string]interface{}{
+		"on_main_window_destroy": onMainWindowDestroy,
+	}
+	builder.ConnectSignals(signals)
+
+	return builder
 }
