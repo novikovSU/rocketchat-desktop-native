@@ -17,12 +17,17 @@ var (
 )
 
 func getConnection() (err error) {
-	client = rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
-	err = client.Login(api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
+	err = getConnectionSafe(config)
 	if err != nil {
 		log.Fatalf("login err: %s\n", err)
 	}
 	return
+}
+
+func getConnectionSafe(config *Config) error {
+	log.Println(config)
+	client = rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
+	return client.Login(api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
 }
 
 // getChannelByName AAA

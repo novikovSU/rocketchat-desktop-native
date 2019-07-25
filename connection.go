@@ -9,6 +9,25 @@ import (
 
 func OpenConnectionWindow() {
 	wnd := createModal("connection_window")
+
+	okBtn := GetGtkButton("connection_ok_button")
+	_, _ = okBtn.Connect("clicked", func() {
+		log.Println("connection_ok_button clicked")
+		newConf := createConfig()
+		if testConfig(newConf) {
+			log.Println("connection settings are correct")
+
+			config = newConf
+			storeConfig(config)
+			openMainWindow(&GtkApplication)
+
+			wnd.Close()
+		} else {
+			log.Println("connection settings are incorrect!")
+			//TODO
+		}
+	})
+
 	wnd.ShowAll()
 	GtkApplication.AddWindow(wnd)
 }
@@ -29,4 +48,27 @@ func createModal(id string) *gtk.Dialog {
 	GtkApplication.AddAction(wndCloseAction)
 
 	return wnd
+}
+
+func createConfig() *Config {
+	//TODO validation
+	config := createDefaultConfig()
+	config.Server = getInputTextValue("server_input_text")
+	config.User = getInputTextValue("login_input_text")
+	config.Email = getInputTextValue("e_mail_input_text")
+	config.Password = getInputTextValue("password_input_text")
+
+	return config
+}
+
+func getInputTextValue(name string) string {
+	ctrl := GetGtkInputText(name)
+	val, _ := ctrl.GetText()
+
+	return val
+}
+
+func testConfig(config *Config) bool {
+	err := getConnectionSafe(config)
+	return err == nil
 }
