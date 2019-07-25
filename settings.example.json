@@ -1,0 +1,9 @@
+{
+    "server": "chat.example.com",
+    "port": "",
+    "user": "john_doe",
+    "email": "johndoe@example.com",
+    "password": "qwerty",
+    "use_tls": true,
+    "debug": false
+}

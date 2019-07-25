@@ -12,6 +12,7 @@ import (
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/gotk3/gotk3/pango"
 )
 
 const appID = "com.github.novikovSU.rocketchat-desktop-native"
@@ -32,11 +33,16 @@ func initList(list *gtk.TreeView) *gtk.ListStore {
 	if err != nil {
 		log.Fatal(err)
 	}
+	cellRenderer.SetProperty("wrap-mode", pango.WRAP_WORD_CHAR)
+	cellRenderer.SetProperty("wrap-width", 530)
+	cellRenderer.SetProperty("ypad", 5)
+	cellRenderer.SetProperty("xpad", 3)
 
 	column, err := gtk.TreeViewColumnNewWithAttribute("List Items", cellRenderer, "markup", 0)
 	if err != nil {
 		log.Fatal(err)
 	}
+	column.SetSizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
 	list.AppendColumn(column)
 
 	store, err := gtk.ListStoreNew(glib.TYPE_STRING)
@@ -113,6 +119,12 @@ func onMainWindowDestroy() {
 }
 
 func main() {
+	// Get application config
+	config, _ = getConfig()
+
+	// Get Rocket.Chat connection
+	getConnection()
+
 	// Create a new application.
 	app, err := gtk.ApplicationNew(appID, glib.APPLICATION_FLAGS_NONE)
 	if err != nil {
@@ -157,19 +169,26 @@ func main() {
 			log.Panic(err)
 		}
 
+		/* DISABLE custom header and menu
 		// Create menu
-		// Create a header bar
-		header, err := gtk.HeaderBarNew()
+		// Get a headerbar
+		obj, err = builder.GetObject("main_header")
 		if err != nil {
+			log.Panic(err)
+		}
+		header, ok := obj.(*gtk.HeaderBar)
+		if ok != true {
 			log.Fatal("Could not create header bar:", err)
 		}
 		header.SetShowCloseButton(true)
-		header.SetTitle("Rocket.Chat Desktop Native")
-		header.SetSubtitle("Do we need a subtitle?")
 
 		// Create a new menu button
-		mbtn, err := gtk.MenuButtonNew()
+		obj, err = builder.GetObject("main_menu_button")
 		if err != nil {
+			log.Panic(err)
+		}
+		mbtn, ok := obj.(*gtk.MenuButton)
+		if ok != true {
 			log.Fatal("Could not create menu button:", err)
 		}
 
@@ -229,6 +248,7 @@ func main() {
 		win.Connect("destroy", app.Quit)
 
 		// END creating menu
+		*/
 
 		obj, err = builder.GetObject("contact_list")
 		if err != nil {
@@ -272,6 +292,9 @@ func main() {
 			adj := rightScrolledWindow.GetVAdjustment()
 			adj.SetValue(adj.GetUpper() - adj.GetPageSize())
 		})
+		chatList.ConnectAfter("size-allocate", func() {
+
+		})
 
 		obj, err = builder.GetObject("text_input")
 		if err != nil {
@@ -285,13 +308,7 @@ func main() {
 		// ------------------
 
 		contactsStore := initList(contactList)
-		addToList(contactsStore, "#general")
-		addToList(contactsStore, "#rocket-native")
-		addToList(contactsStore, "Иванов Иван")
-		addToList(contactsStore, "Петров Петр")
-		addToList(contactsStore, "Сидоров Сидор")
-		addToList(contactsStore, "Иванов Иван")
-		addToList(contactsStore, "Петров Петр")
+		fillContactList(contactsStore)
 
 		chatStore := initList(chatList)
 		addToList(chatStore, "<i>--- Вы вошли в чат. ---</i>")
@@ -304,8 +321,10 @@ func main() {
 		contactsSelection.Connect("changed", func() {
 			//onChanged(contactsSelection, chatCaption)
 			selectionText := getSelectionText(contactsSelection)
-			header.SetSubtitle(selectionText)
+			//header.SetSubtitle(selectionText)
 			chatCaption.SetText(selectionText)
+
+			fillChat(chatStore, selectionText)
 		})
 
 		/*chatSelection, err := chatList.GetSelection()
