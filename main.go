@@ -362,7 +362,7 @@ func openMainWindow(app *gtk.Application) {
 		}
 	})
 
-	pullChan = subscribeToUpdates(client, 300)
+	pullChan = subscribeToUpdates(client, 500)
 
 	win.ShowAll()
 	app.AddWindow(win)

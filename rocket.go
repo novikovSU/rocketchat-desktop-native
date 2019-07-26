@@ -230,7 +230,9 @@ func subscribeToUpdates(c *rest.Client, freq time.Duration) chan []api.Message {
 			msgs := getNewMessages(c)
 			msgChan <- msgs
 			for _, msg := range msgs {
-				if msg.ChannelID == currentChatID {
+				//log.Printf("CurrentChatID: %s\n", currentChatID)
+				//log.Printf("Incoming message: %+v\n", msg)
+				if msg.ChannelID == currentChatID || msg.ChannelID == currentChatID+currentChatID {
 					text := strings.Replace(msg.Text, "&nbsp;", "", -1)
 					text = strings.Replace(text, "<", "", -1)
 					text = strings.Replace(text, ">", "", -1)
