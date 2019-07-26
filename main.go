@@ -2,12 +2,10 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
@@ -20,8 +18,7 @@ const appID = "com.github.novikovSU.rocketchat-desktop-native"
 const (
 	iistItem = iota
 	nColumns
-	keyEnter    = 65293
-	senderConst = "Полиграфов Полиграф"
+	keyEnter = 65293
 )
 
 var (
@@ -126,6 +123,10 @@ func main() {
 
 	// Get Rocket.Chat connection
 	getConnection()
+
+	// Init chat history
+	allHistory = make(map[string]chatHistory)
+	_ = getNewMessages(client)
 
 	// Create a new application.
 	app, err := gtk.ApplicationNew(appID, glib.APPLICATION_FLAGS_NONE)
@@ -336,10 +337,13 @@ func main() {
 
 					match, _ := regexp.MatchString("^(\\s*)$", inputText)
 					if !match {
-						now := time.Now()
-						timeText := now.Format("2006-01-02 15:04:05")
-						text := fmt.Sprintf("<b>%s</b> <i>%s</i>\n%s", senderConst, timeText, inputText)
-						addToList(chatStore, text)
+						contactsSelection, err := contactList.GetSelection()
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						selectionText := getSelectionText(contactsSelection)
+						postByName(selectionText, inputText)
 						buffer.SetText("")
 					}
 				}
@@ -350,6 +354,8 @@ func main() {
 				//log.Printf("Keycode: %d\n", keyEvent.KeyVal())
 			}
 		})
+
+		pullChan = subscribeToUpdates(client, 500)
 
 		win.ShowAll()
 		app.AddWindow(win)

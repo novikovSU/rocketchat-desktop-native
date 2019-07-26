@@ -79,3 +79,7 @@ func fillChat(cs *gtk.ListStore, name string) {
 		addToList(cs, text)
 	}
 }
+
+func showUpdates(cs *gtk.ListStore) {
+
+}

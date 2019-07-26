@@ -5,8 +5,6 @@ import (
 	"log"
 	"time"
 
-	bolt "go.etcd.io/bbolt"
-
 	"github.com/novikovSU/gorocket/api"
 	"github.com/novikovSU/gorocket/rest"
 )
@@ -14,7 +12,17 @@ import (
 var (
 	client  *rest.Client
 	msgChan []api.Message
+
+	me         *api.User
+	allHistory map[string]chatHistory
+	pullChan   chan []api.Message
+	currentChat string
 )
+
+type chatHistory struct {
+	lastTime string
+	msgs     []api.Message
+}
 
 func getConnection() (err error) {
 	client = rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
@@ -76,168 +84,145 @@ func getUserByName(name string) (*api.User, error) {
 	return nil, errors.New("can't find user by name")
 }
 
-func getHistoryByName(name string) ([]api.Message, error) {
+func getIDByName(name string) (string, error) {
 	firstSymbol := string([]rune(name)[0])
-
-	var msgs []api.Message
 
 	switch firstSymbol {
 	case hashSign:
 		channel, err := getChannelByName(string([]rune(name)[1:]))
 		if err != nil {
 			log.Printf("ERROR: get channel id for name %s err: %s\n", name, err)
-			return nil, err
+			return "", err
 		}
-		msgs, err = client.Channel().History(&rest.HistoryOptions{RoomID: channel.ID})
-		if err != nil {
-			log.Printf("ERROR: get messages from channel %s err: %s\n", channel.Name, err)
-			return nil, err
-		}
+		return channel.ID, nil
 		break
 	case lockSign:
 		group, err := getGroupByName(string([]rune(name)[1:]))
 		if err != nil {
 			log.Printf("ERROR: get group id for name %s err: %s\n", name, err)
-			return nil, err
+			return "", err
 		}
-		msgs, err = client.Groups().History(&rest.HistoryOptions{RoomID: group.ID})
-		if err != nil {
-			log.Printf("ERROR: get messages from group %s err: %s\n", group.Name, err)
-			return nil, err
-		}
+		return group.ID, nil
 		break
 	default:
 		user, err := getUserByName(name)
 		if err != nil {
 			log.Printf("ERROR: get user id for name %s err: %s\n", name, err)
-			return nil, err
+			return "", err
 		}
-		msgs, err = client.Im().History(&rest.HistoryOptions{RoomID: user.ID})
-		if err != nil {
-			log.Printf("ERROR: get messages from im %s err: %s\n", user.Name, err)
-			return nil, err
-		}
+		return user.ID, nil
 	}
 
+	return "", nil
+}
+
+func getHistoryByName(name string) ([]api.Message, error) {
+	var msgs []api.Message
+	rID, _ := getIDByName(name)
+	msgs = allHistory[rID].msgs
 	return msgs, nil
+}
+
+func postByName(name string, text string) {
+	rID, _ := getIDByName(name)
+	_, err := client.Chat().Post(&rest.ChatPostOptions{Channel: rID, Text: text})
+	if err != nil {
+		if config.Debug {
+			log.Printf("send message err: %s\n", err)
+		}
+	}
 }
 
 func ownMessage(c *Config, msg api.Message) bool {
 	return c.User == msg.User.UserName
 }
 
-// Rewrite github.com/pyinx/gorocket/rest.GetAllMessages
-// CHANGES:
-//     Add dirty persistent storage for request last time (need for dedup responses after restart)
-//     Add private groups and direct chats for polling (TODO)
-func getAllMessages(c *rest.Client) chan []api.Message {
+func getNewMessages(c *rest.Client) []api.Message {
 
-	msgChan := make(chan []api.Message, 1024)
+	var result []api.Message
 
-	go func() {
-		db, err := bolt.Open("rocket.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
-		if err != nil {
-			log.Fatal(err)
+	channels, _ := c.Channel().List()
+	for _, channel := range channels {
+		var lastTime string
+		if hist, ok := allHistory[channel.ID]; ok {
+			lastTime = hist.lastTime
 		}
-		defer db.Close()
-
-		db.Update(func(tx *bolt.Tx) error {
-			_, err := tx.CreateBucketIfNotExists([]byte("cache"))
-			if err != nil {
-				return err
+		msgs, err := c.Channel().History(&rest.HistoryOptions{RoomID: channel.ID, Oldest: lastTime})
+		if err != nil {
+			log.Printf("ERROR: get messages from channel %s err: %s\n", channel.Name, err)
+		} else {
+			if len(msgs) != 0 {
+				chat, ok := allHistory[channel.ID]
+				if ok {
+					chat.lastTime = msgs[0].Timestamp.String()
+					chat.msgs = append(chat.msgs, msgs...)
+				} else {
+					chat = chatHistory{lastTime: msgs[0].Timestamp.String(), msgs: msgs}
+				}
+				allHistory[channel.ID] = chat
+				result = append(result, msgs...)
 			}
-			return nil
-		})
-		//msgMap := make(map[string]string)
+		}
+	}
 
+	groups, _ := c.Groups().ListGroups()
+	for _, group := range groups {
+		var lastTime string
+		if hist, ok := allHistory[group.ID]; ok {
+			lastTime = hist.lastTime
+		}
+		msgs, err := c.Groups().History(&rest.HistoryOptions{RoomID: group.ID, Oldest: lastTime})
+		if err != nil {
+			log.Printf("ERROR: get messages from group %s err: %s\n", group.Name, err)
+		} else {
+			if len(msgs) != 0 {
+				chat, ok := allHistory[group.ID]
+				if ok {
+					chat.lastTime = msgs[0].Timestamp.String()
+					chat.msgs = append(chat.msgs, msgs...)
+				} else {
+					chat = chatHistory{lastTime: msgs[0].Timestamp.String(), msgs: msgs}
+				}
+				allHistory[group.ID] = chat
+				result = append(result, msgs...)
+			}
+		}
+	}
+
+	users, _ := c.Users().List()
+	for _, user := range users {
+		var lastTime string
+		if hist, ok := allHistory[user.ID]; ok {
+			lastTime = hist.lastTime
+		}
+		msgs, err := c.Im().History(&rest.HistoryOptions{RoomID: user.ID, Oldest: lastTime})
+		if err != nil {
+			log.Printf("ERROR: get messages from IMs err: %s\n", err)
+		} else {
+			if len(msgs) != 0 {
+				chat, ok := allHistory[user.ID]
+				if ok {
+					chat.lastTime = msgs[0].Timestamp.String()
+					chat.msgs = append(chat.msgs, msgs...)
+				} else {
+					chat = chatHistory{lastTime: msgs[0].Timestamp.String(), msgs: msgs}
+				}
+				allHistory[user.ID] = chat
+				result = append(result, msgs...)
+			}
+		}
+	}
+
+	return result
+}
+
+func subscribeToUpdates(c *rest.Client, freq time.Duration) chan []api.Message {
+	msgChan := make(chan []api.Message, 1024)
+	go func() {
 		for {
-			channels, _ := c.Channel().ListJoined()
-			for _, channel := range channels {
-				var lastTime string
-				err := db.View(func(tx *bolt.Tx) error {
-					b := tx.Bucket([]byte("cache"))
-					lastTime = string(b.Get([]byte(channel.Name)))
-					return nil
-				})
-				if err != nil {
-					log.Fatal(err)
-				}
-				msgs, err := c.Channel().History(&rest.HistoryOptions{RoomID: channel.ID, Oldest: lastTime})
-				if err != nil {
-					log.Printf("ERROR: get messages from channel %s err: %s\n", channel.Name, err)
-				} else {
-					if len(msgs) != 0 {
-						err := db.Update(func(tx *bolt.Tx) error {
-							b := tx.Bucket([]byte("cache"))
-							err := b.Put([]byte(channel.Name), []byte(msgs[0].Timestamp.String()))
-							return err
-						})
-						if err != nil {
-							log.Fatal(err)
-						}
-						msgChan <- msgs
-					}
-				}
-			}
-
-			groups, _ := c.Groups().ListGroups()
-			for _, group := range groups {
-				var lastTime string
-				err := db.View(func(tx *bolt.Tx) error {
-					b := tx.Bucket([]byte("cache"))
-					lastTime = string(b.Get([]byte(group.Name)))
-					return nil
-				})
-				if err != nil {
-					log.Fatal(err)
-				}
-				msgs, err := c.Groups().History(&rest.HistoryOptions{RoomID: group.ID, Oldest: lastTime})
-				if err != nil {
-					log.Printf("ERROR: get messages from group %s err: %s\n", group.Name, err)
-				} else {
-					if len(msgs) != 0 {
-						err := db.Update(func(tx *bolt.Tx) error {
-							b := tx.Bucket([]byte("cache"))
-							err := b.Put([]byte(group.Name), []byte(msgs[0].Timestamp.String()))
-							return err
-						})
-						if err != nil {
-							log.Fatal(err)
-						}
-						msgChan <- msgs
-					}
-				}
-			}
-
-			ims, _ := c.Im().List()
-			for _, im := range ims {
-				var lastTime string
-				err := db.View(func(tx *bolt.Tx) error {
-					b := tx.Bucket([]byte("cache"))
-					lastTime = string(b.Get([]byte(im.ID)))
-					return nil
-				})
-				if err != nil {
-					log.Fatal(err)
-				}
-				msgs, err := c.Im().History(&rest.HistoryOptions{RoomID: im.ID, Oldest: lastTime})
-				if err != nil {
-					log.Printf("ERROR: get messages from IMs err: %s\n", err)
-				} else {
-					if len(msgs) != 0 {
-						err := db.Update(func(tx *bolt.Tx) error {
-							b := tx.Bucket([]byte("cache"))
-							err := b.Put([]byte(im.ID), []byte(msgs[0].Timestamp.String()))
-							return err
-						})
-						if err != nil {
-							log.Fatal(err)
-						}
-						msgChan <- msgs
-					}
-				}
-			}
-			time.Sleep(200 * time.Microsecond)
+			msgs := getNewMessages(c)
+			msgChan <- msgs
+			time.Sleep(freq * time.Millisecond)
 		}
 	}()
 	return msgChan
