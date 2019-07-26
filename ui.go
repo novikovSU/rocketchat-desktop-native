@@ -67,6 +67,8 @@ func fillChat(cs *gtk.ListStore, name string) {
 		return
 	}
 
+	currentChatID, _ = getIDByName(name)
+
 	sort.Sort(DateSorter(msgs))
 
 	cs.Clear()

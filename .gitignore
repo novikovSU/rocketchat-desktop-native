@@ -2,4 +2,6 @@
 /main
 /settings.json
 /data.db
+/.idea
+/rocketchat-desktop-native
 *~

@@ -2,7 +2,9 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/novikovSU/gorocket/api"
@@ -13,10 +15,10 @@ var (
 	client  *rest.Client
 	msgChan []api.Message
 
-	me         *api.User
-	allHistory map[string]chatHistory
-	pullChan   chan []api.Message
-	currentChat string
+	me            *api.User
+	allHistory    map[string]chatHistory
+	pullChan      chan []api.Message
+	currentChatID string
 )
 
 type chatHistory struct {
@@ -25,12 +27,17 @@ type chatHistory struct {
 }
 
 func getConnection() (err error) {
-	client = rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
-	err = client.Login(api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
+	err = getConnectionSafe(config)
 	if err != nil {
 		log.Fatalf("login err: %s\n", err)
 	}
 	return
+}
+
+func getConnectionSafe(config *Config) error {
+	log.Println(config)
+	client = rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
+	return client.Login(api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
 }
 
 // getChannelByName AAA
@@ -222,6 +229,16 @@ func subscribeToUpdates(c *rest.Client, freq time.Duration) chan []api.Message {
 		for {
 			msgs := getNewMessages(c)
 			msgChan <- msgs
+			for _, msg := range msgs {
+				if msg.ChannelID == currentChatID {
+					text := strings.Replace(msg.Text, "&nbsp;", "", -1)
+					text = strings.Replace(text, "<", "", -1)
+					text = strings.Replace(text, ">", "", -1)
+					//log.Printf("Text: %s\n", text)
+					text = fmt.Sprintf("<b>%s</b> <i>%s</i>\n%s", msg.User.Name, msg.Timestamp.Format("2006-01-02 15:04:05"), text)
+					addToList(chatStore, text)
+				}
+			}
 			time.Sleep(freq * time.Millisecond)
 		}
 	}()

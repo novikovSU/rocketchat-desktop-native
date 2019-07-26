@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
+	"os"
 )
 
 // Config -- AAA
@@ -18,19 +20,23 @@ type Config struct {
 }
 
 var (
-	config *Config
+	config       *Config
+	settingsFile = "settings.json"
 )
 
 func getConfig(params ...string) (*Config, error) {
 	var config Config
 
-	file := "settings.json"
-
 	if len(params) > 0 {
-		file = params[0]
+		settingsFile = params[0]
 	}
 
-	b, err := ioutil.ReadFile(file)
+	var _, err = os.Stat(settingsFile)
+	if os.IsNotExist(err) {
+		return nil, errors.New("Config file does not exists")
+	}
+
+	b, err := ioutil.ReadFile(settingsFile)
 	if err != nil {
 		log.Fatalf("Failed to read config file: %s\n", err)
 	}
@@ -41,4 +47,17 @@ func getConfig(params ...string) (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func createDefaultConfig() *Config {
+	return &Config{UseTLS: true}
+}
+
+func storeConfig(config *Config) error {
+	confContent, err := json.MarshalIndent(config, "", " ")
+	if err == nil {
+		err = ioutil.WriteFile(settingsFile, confContent, 0644)
+	}
+
+	return err
 }
