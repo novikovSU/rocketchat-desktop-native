@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"github.com/getlantern/systray"
 	"log"
 	"os"
 	"regexp"
@@ -24,6 +25,7 @@ const (
 var (
 	GtkApplication gtk.Application
 	GtkBuilder     gtk.Builder
+	MainWindow     *gtk.Window
 	ctrlPressed    = false
 	chatStore      *gtk.ListStore
 )
@@ -153,6 +155,8 @@ func main() {
 		} else {
 			OpenConnectionWindow()
 		}
+
+		systray.Run(onSysTrayReady, onSysTrayExit)
 	})
 
 	// Connect function to application shutdown event, this is not required.
@@ -172,6 +176,7 @@ func openMainWindow(app *gtk.Application) {
 	app.SendNotification(appID, notif)
 
 	win := CreateWindow("main_window")
+	MainWindow = win
 
 	/* DISABLE custom header and menu */
 	// Create menu
@@ -388,10 +393,6 @@ func CreateWindow(id string) *gtk.Window {
 	GtkApplication.AddAction(wndCloseAction)
 
 	return wnd
-}
-
-func ttt(obj *glib.IObject) *gtk.Window {
-	return (*obj).(*gtk.Window)
 }
 
 func createGtkBuilder() *gtk.Builder {

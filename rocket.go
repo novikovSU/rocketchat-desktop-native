@@ -35,7 +35,6 @@ func getConnection() (err error) {
 }
 
 func getConnectionSafe(config *Config) error {
-	log.Println(config)
 	client = rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
 	return client.Login(api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
 }
@@ -240,6 +239,8 @@ func subscribeToUpdates(c *rest.Client, freq time.Duration) chan []api.Message {
 					text = fmt.Sprintf("<b>%s</b> <i>%s</i>\n%s", msg.User.Name, msg.Timestamp.Format("2006-01-02 15:04:05"), text)
 					addToList(chatStore, text)
 				}
+				//TODO Request error: 429 Too Many Requests
+				time.Sleep(80)
 			}
 			time.Sleep(freq * time.Millisecond)
 		}
