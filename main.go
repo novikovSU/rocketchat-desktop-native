@@ -3,15 +3,14 @@ package main
 import (
 	"errors"
 	"github.com/getlantern/systray"
-	"log"
-	"os"
-	"regexp"
-	"strings"
-
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/pango"
+	"log"
+	"os"
+	"regexp"
+	"strings"
 )
 
 const appID = "com.github.novikovSU.rocketchat-desktop-native"
@@ -20,6 +19,8 @@ const (
 	iistItem = iota
 	nColumns
 	keyEnter = 65293
+
+	Debug = true
 )
 
 var (
@@ -125,7 +126,7 @@ func main() {
 	config, _ = getConfig()
 
 	// Get Rocket.Chat connection
-	getConnection()
+	initRocket()
 
 	// Init chat history
 	allHistory = make(map[string]chatHistory)
@@ -252,44 +253,12 @@ func openMainWindow(app *gtk.Application) {
 
 	// END creating menu
 
-	obj, err = GtkBuilder.GetObject("contact_list")
-	if err != nil {
-		log.Fatal(err)
-	}
-	contactList, ok := obj.(*gtk.TreeView)
-	if ok != true {
-		log.Fatal(err)
-	}
-
-	// -------------
-
-	obj, err = GtkBuilder.GetObject("chat_caption")
-	if err != nil {
-		log.Fatal(err)
-	}
-	chatCaption, ok := obj.(*gtk.Label)
-	if ok != true {
-		log.Fatal(err)
-	}
-
-	obj, err = GtkBuilder.GetObject("chat_list")
-	if err != nil {
-		log.Fatal(err)
-	}
-	chatList, ok := obj.(*gtk.TreeView)
-	if ok != true {
-		log.Fatal(err)
-	}
+	contactList := GetTreeView("contact_list")
+	chatCaption := GetLabel("chat_caption")
+	chatList := GetTreeView("chat_list")
+	rightScrolledWindow := GetScrolledWindow("right_scrolled_window")
 
 	// Autoscroll of chatList
-	obj, err = GtkBuilder.GetObject("right_scrolled_window")
-	if err != nil {
-		log.Fatal(err)
-	}
-	rightScrolledWindow, ok := obj.(*gtk.ScrolledWindow)
-	if ok != true {
-		log.Fatal(err)
-	}
 	chatList.Connect("size-allocate", func() {
 		adj := rightScrolledWindow.GetVAdjustment()
 		adj.SetValue(adj.GetUpper() - adj.GetPageSize())
@@ -298,15 +267,7 @@ func openMainWindow(app *gtk.Application) {
 
 	})
 
-	obj, err = GtkBuilder.GetObject("text_input")
-	if err != nil {
-		log.Fatal(err)
-	}
-	textInput, ok := obj.(*gtk.TextView)
-	if ok != true {
-		log.Fatal(err)
-	}
-
+	textInput := GetTextView("text_input")
 	// ------------------
 
 	contactsStore := initList(contactList)

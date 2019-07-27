@@ -11,6 +11,25 @@ import (
 	"github.com/novikovSU/gorocket/rest"
 )
 
+type UserChangeSubcriber interface {
+	onChange(user *api.User, id string, event string)
+	eventsToCatch() *[]string
+}
+
+type ChannelChangeSubcriber interface {
+	onChange(user *api.Channel, id string, event string)
+	eventsToCatch() *[]string
+}
+
+type GroupChangeSubcriber interface {
+	onChange(user *api.Group, id string, event string)
+	eventsToCatch() *[]string
+}
+
+const (
+	contactItemsUpdateInterval = 45
+)
+
 var (
 	client  *rest.Client
 	msgChan []api.Message
@@ -19,6 +38,14 @@ var (
 	allHistory    map[string]chatHistory
 	pullChan      chan []api.Message
 	currentChatID string
+
+	userChangeSubscribers    []*UserChangeSubcriber
+	channelChangeSubscribers []*ChannelChangeSubcriber
+	groupChangeSubscribers   []*GroupChangeSubcriber
+
+	users    = make(map[string]*api.User)
+	channels = make(map[string]*api.Channel)
+	groups   = make(map[string]*api.Group)
 )
 
 type chatHistory struct {
@@ -26,6 +53,22 @@ type chatHistory struct {
 	msgs     []api.Message
 }
 
+func initRocket() {
+	client = initConnection()
+	loadContactItemsAsync()
+}
+
+func initConnection() *rest.Client {
+	client := rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
+	err := client.Login(api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
+	if err != nil {
+		log.Fatalf("login err: %s\n", err)
+	}
+
+	return client
+}
+
+//deprecated
 func getConnection() (err error) {
 	err = getConnectionSafe(config)
 	if err != nil {
@@ -34,6 +77,7 @@ func getConnection() (err error) {
 	return
 }
 
+//deprecated
 func getConnectionSafe(config *Config) error {
 	client = rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
 	return client.Login(api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
@@ -246,4 +290,201 @@ func subscribeToUpdates(c *rest.Client, freq time.Duration) chan []api.Message {
 		}
 	}()
 	return msgChan
+}
+
+/**
+Loads async from server: channels, groups, users.
+Stay active for changes. Use subscribers to get them
+*/
+func loadContactItemsAsync() {
+	go func() {
+		for {
+			loadUsers()
+			loadChannels()
+			loadGroups()
+			time.Sleep(contactItemsUpdateInterval * time.Second)
+		}
+	}()
+}
+
+func loadUsers() {
+	restUsers, err := client.Users().List()
+	if err != nil {
+		log.Printf("Can't get users: %s\n", err)
+	}
+
+	for _, existsUser := range users {
+		if !containsUser(&restUsers, existsUser) {
+			removeUser(existsUser)
+		}
+	}
+
+	for _, restUser := range restUsers {
+		if users[restUser.ID] == nil {
+			addUser(&restUser)
+		}
+	}
+}
+
+func loadChannels() {
+	restChannels, err := client.Channel().List()
+	if err != nil {
+		log.Printf("Can't get channels: %s\n", err)
+	}
+
+	for _, existsChannel := range channels {
+		if !containsChannel(&restChannels, existsChannel) {
+			removeChannel(existsChannel)
+		}
+	}
+
+	for _, restChannel := range restChannels {
+		if channels[restChannel.ID] == nil {
+			addChannel(&restChannel)
+		}
+	}
+}
+
+func loadGroups() {
+	restGroups, err := client.Groups().ListGroups()
+	if err != nil {
+		log.Printf("Can't get groups: %s\n", err)
+	}
+
+	for _, existsGroup := range groups {
+		if !containsGroup(&restGroups, existsGroup) {
+			removeGroup(existsGroup)
+		}
+	}
+
+	for _, restGroup := range restGroups {
+		if groups[restGroup.ID] == nil {
+			addGroup(&restGroup)
+		}
+	}
+}
+
+func subscribeToUsersChanges(subcriber *UserChangeSubcriber) {
+	userChangeSubscribers = append(userChangeSubscribers, subcriber)
+}
+
+func subscribeToChanngelsChanges(subcriber *ChannelChangeSubcriber) {
+	channelChangeSubscribers = append(channelChangeSubscribers, subcriber)
+}
+
+func subscribeToGroupsChanges(subcriber *GroupChangeSubcriber) {
+	groupChangeSubscribers = append(groupChangeSubscribers, subcriber)
+}
+
+func addUser(user *api.User) {
+	eventName := "addUser"
+	debugEvent(eventName, user)
+
+	users[user.ID] = user
+	for _, subscriber := range userChangeSubscribers {
+		if StringContains((*subscriber).eventsToCatch(), eventName) {
+			(*subscriber).onChange(user, user.ID, eventName)
+		}
+	}
+}
+
+func removeUser(user *api.User) {
+	eventName := "removeUser"
+	debugEvent(eventName, user)
+
+	delete(users, user.ID)
+	for _, subscriber := range userChangeSubscribers {
+		if StringContains((*subscriber).eventsToCatch(), eventName) {
+			(*subscriber).onChange(user, user.ID, eventName)
+		}
+	}
+}
+
+func addChannel(channel *api.Channel) {
+	eventName := "addChannel"
+	debugEvent(eventName, channel)
+
+	channels[channel.ID] = channel
+	for _, subscriber := range channelChangeSubscribers {
+		if StringContains((*subscriber).eventsToCatch(), eventName) {
+			(*subscriber).onChange(channel, channel.ID, eventName)
+		}
+	}
+}
+
+func removeChannel(channel *api.Channel) {
+	eventName := "removeChannel"
+	debugEvent(eventName, channel)
+
+	delete(channels, channel.ID)
+	for _, subscriber := range channelChangeSubscribers {
+		if StringContains((*subscriber).eventsToCatch(), eventName) {
+			(*subscriber).onChange(channel, channel.ID, eventName)
+		}
+	}
+}
+
+func addGroup(group *api.Group) {
+	eventName := "addGroup"
+	debugEvent(eventName, group)
+
+	groups[group.ID] = group
+	for _, subscriber := range groupChangeSubscribers {
+		if StringContains((*subscriber).eventsToCatch(), eventName) {
+			(*subscriber).onChange(group, group.ID, eventName)
+		}
+	}
+}
+
+func removeGroup(group *api.Group) {
+	eventName := "removeGroup"
+	debugEvent(eventName, group)
+
+	delete(groups, group.ID)
+	for _, subscriber := range groupChangeSubscribers {
+		if StringContains((*subscriber).eventsToCatch(), eventName) {
+			(*subscriber).onChange(group, group.ID, eventName)
+		}
+	}
+}
+
+func debugEvent(eventName string, eventData interface{}) {
+	if Debug {
+		log.Printf("Fire event: %s %s\n", eventName, eventData)
+	}
+}
+
+/*---------------------------------------------------------------------------
+Very common and dummy functions
+TODO codgen?
+---------------------------------------------------------------------------*/
+
+func containsUser(users *[]api.User, cmpUser *api.User) bool {
+	for _, user := range *users {
+		if strings.Compare(user.ID, cmpUser.ID) == 0 {
+			return true
+		}
+
+	}
+	return false
+}
+
+func containsChannel(channels *[]api.Channel, cmpChannel *api.Channel) bool {
+	for _, channel := range *channels {
+		if strings.Compare(channel.ID, cmpChannel.ID) == 0 {
+			return true
+		}
+
+	}
+	return false
+}
+
+func containsGroup(groups *[]api.Group, cmpGroup *api.Group) bool {
+	for _, group := range *groups {
+		if strings.Compare(group.ID, cmpGroup.ID) == 0 {
+			return true
+		}
+
+	}
+	return false
 }
