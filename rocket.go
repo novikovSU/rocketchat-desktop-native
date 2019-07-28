@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	cfg "github.com/novikovSU/rocketchat-desktop-native/config"
 	"log"
 	"strings"
 	"time"
@@ -27,7 +28,7 @@ type GroupChangeSubcriber interface {
 }
 
 const (
-	contactItemsUpdateInterval = 45
+	contactListUpdateInterval = 45 * time.Second
 )
 
 var (
@@ -55,7 +56,7 @@ type chatHistory struct {
 
 func initRocket() {
 	client = initConnection()
-	loadContactItemsAsync()
+	loadContactListAsync()
 }
 
 func initConnection() *rest.Client {
@@ -296,13 +297,13 @@ func subscribeToUpdates(c *rest.Client, freq time.Duration) chan []api.Message {
 Loads async from server: channels, groups, users.
 Stay active for changes. Use subscribers to get them
 */
-func loadContactItemsAsync() {
+func loadContactListAsync() {
 	go func() {
 		for {
 			loadUsers()
 			loadChannels()
 			loadGroups()
-			time.Sleep(contactItemsUpdateInterval * time.Second)
+			time.Sleep(contactListUpdateInterval)
 		}
 	}()
 }
@@ -449,7 +450,7 @@ func removeGroup(group *api.Group) {
 }
 
 func debugEvent(eventName string, eventData interface{}) {
-	if Debug {
+	if cfg.Debug {
 		log.Printf("Fire event: %s %s\n", eventName, eventData)
 	}
 }

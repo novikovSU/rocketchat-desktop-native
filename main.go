@@ -19,8 +19,6 @@ const (
 	iistItem = iota
 	nColumns
 	keyEnter = 65293
-
-	Debug = true
 )
 
 var (
