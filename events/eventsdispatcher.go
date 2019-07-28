@@ -57,11 +57,11 @@ func Unsubscribe(subscriberName string, eventName string) {
 	}
 }
 
-func raiseEventAsync(eventName string, args []*interface{}) {
-	go raiseEvent(eventName, args)
+func RaiseEventAsync(eventName string, args []*interface{}) {
+	go RaiseEvent(eventName, args)
 }
 
-func raiseEvent(eventName string, args []*interface{}) {
+func RaiseEvent(eventName string, args []*interface{}) {
 	if config.Debug {
 		log.Printf("Fire event: %s with args: %s\n", eventName, args)
 	}

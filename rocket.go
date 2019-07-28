@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	cfg "github.com/novikovSU/rocketchat-desktop-native/config"
+	"github.com/novikovSU/rocketchat-desktop-native/events"
 	"log"
 	"strings"
 	"time"
@@ -11,21 +11,6 @@ import (
 	"github.com/novikovSU/gorocket/api"
 	"github.com/novikovSU/gorocket/rest"
 )
-
-type UserChangeSubcriber interface {
-	onChange(user *api.User, id string, event string)
-	eventsToCatch() *[]string
-}
-
-type ChannelChangeSubcriber interface {
-	onChange(user *api.Channel, id string, event string)
-	eventsToCatch() *[]string
-}
-
-type GroupChangeSubcriber interface {
-	onChange(user *api.Group, id string, event string)
-	eventsToCatch() *[]string
-}
 
 const (
 	contactListUpdateInterval = 45 * time.Second
@@ -39,10 +24,6 @@ var (
 	allHistory    map[string]chatHistory
 	pullChan      chan []api.Message
 	currentChatID string
-
-	userChangeSubscribers    []*UserChangeSubcriber
-	channelChangeSubscribers []*ChannelChangeSubcriber
-	groupChangeSubscribers   []*GroupChangeSubcriber
 
 	users    = make(map[string]*api.User)
 	channels = make(map[string]*api.Channel)
@@ -365,94 +346,52 @@ func loadGroups() {
 	}
 }
 
-func subscribeToUsersChanges(subcriber *UserChangeSubcriber) {
-	userChangeSubscribers = append(userChangeSubscribers, subcriber)
-}
-
-func subscribeToChanngelsChanges(subcriber *ChannelChangeSubcriber) {
-	channelChangeSubscribers = append(channelChangeSubscribers, subcriber)
-}
-
-func subscribeToGroupsChanges(subcriber *GroupChangeSubcriber) {
-	groupChangeSubscribers = append(groupChangeSubscribers, subcriber)
-}
-
 func addUser(user *api.User) {
-	eventName := "addUser"
-	debugEvent(eventName, user)
-
 	users[user.ID] = user
-	for _, subscriber := range userChangeSubscribers {
-		if StringContains((*subscriber).eventsToCatch(), eventName) {
-			(*subscriber).onChange(user, user.ID, eventName)
-		}
-	}
+
+	//TODO how convert it in one-line?!
+	var u interface{} = user
+	events.RaiseEvent("addUser", []*interface{}{&u})
 }
 
 func removeUser(user *api.User) {
-	eventName := "removeUser"
-	debugEvent(eventName, user)
-
 	delete(users, user.ID)
-	for _, subscriber := range userChangeSubscribers {
-		if StringContains((*subscriber).eventsToCatch(), eventName) {
-			(*subscriber).onChange(user, user.ID, eventName)
-		}
-	}
+
+	//TODO how convert it in one-line?!
+	var u interface{} = user
+	events.RaiseEvent("removeUser", []*interface{}{&u})
 }
 
 func addChannel(channel *api.Channel) {
-	eventName := "addChannel"
-	debugEvent(eventName, channel)
-
 	channels[channel.ID] = channel
-	for _, subscriber := range channelChangeSubscribers {
-		if StringContains((*subscriber).eventsToCatch(), eventName) {
-			(*subscriber).onChange(channel, channel.ID, eventName)
-		}
-	}
+
+	//TODO how convert it in one-line?!
+	var ch interface{} = channel
+	events.RaiseEvent("addChannel", []*interface{}{&ch})
 }
 
 func removeChannel(channel *api.Channel) {
-	eventName := "removeChannel"
-	debugEvent(eventName, channel)
-
 	delete(channels, channel.ID)
-	for _, subscriber := range channelChangeSubscribers {
-		if StringContains((*subscriber).eventsToCatch(), eventName) {
-			(*subscriber).onChange(channel, channel.ID, eventName)
-		}
-	}
+
+	//TODO how convert it in one-line?!
+	var ch interface{} = channel
+	events.RaiseEvent("removeChannel", []*interface{}{&ch})
 }
 
 func addGroup(group *api.Group) {
-	eventName := "addGroup"
-	debugEvent(eventName, group)
-
 	groups[group.ID] = group
-	for _, subscriber := range groupChangeSubscribers {
-		if StringContains((*subscriber).eventsToCatch(), eventName) {
-			(*subscriber).onChange(group, group.ID, eventName)
-		}
-	}
+
+	//TODO how convert it in one-line?!
+	var g interface{} = group
+	events.RaiseEvent("addGroup", []*interface{}{&g})
 }
 
 func removeGroup(group *api.Group) {
-	eventName := "removeGroup"
-	debugEvent(eventName, group)
-
 	delete(groups, group.ID)
-	for _, subscriber := range groupChangeSubscribers {
-		if StringContains((*subscriber).eventsToCatch(), eventName) {
-			(*subscriber).onChange(group, group.ID, eventName)
-		}
-	}
-}
 
-func debugEvent(eventName string, eventData interface{}) {
-	if cfg.Debug {
-		log.Printf("Fire event: %s %s\n", eventName, eventData)
-	}
+	//TODO how convert it in one-line?!
+	var g interface{} = group
+	events.RaiseEvent("removeGroup", []*interface{}{&g})
 }
 
 /*---------------------------------------------------------------------------
