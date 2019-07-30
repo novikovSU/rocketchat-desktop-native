@@ -1,9 +1,10 @@
 package events
 
 import (
-	"github.com/novikovSU/rocketchat-desktop-native/config"
 	"log"
 	"strconv"
+
+	"../config"
 )
 
 var (

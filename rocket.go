@@ -3,12 +3,14 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/novikovSU/rocketchat-desktop-native/events"
 	"log"
 	"strings"
 	"time"
 
+	"./events"
+
 	"github.com/novikovSU/gorocket/api"
+	"github.com/novikovSU/gorocket/realtime"
 	"github.com/novikovSU/gorocket/rest"
 )
 
@@ -17,12 +19,13 @@ const (
 )
 
 var (
-	client  *rest.Client
-	msgChan []api.Message
+	client   *rest.Client
+	clientRT *realtime.Client
+	msgChan  []api.Message
 
 	me            *api.User
 	allHistory    map[string]chatHistory
-	pullChan      chan []api.Message
+	pullChan      chan api.Message
 	currentChatID string
 
 	users    = make(map[string]*api.User)
@@ -36,16 +39,24 @@ type chatHistory struct {
 }
 
 func initRocket() {
-	client = initConnection()
+	client = initRESTConnection()
+	clientRT = initRTConnection()
 	loadContactListAsync()
 }
 
-func initConnection() *rest.Client {
+func initRESTConnection() *rest.Client {
 	client := rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
 	err := client.Login(api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
 	if err != nil {
 		log.Fatalf("login err: %s\n", err)
 	}
+
+	return client
+}
+
+func initRTConnection() *realtime.Client {
+	client, _ := realtime.NewClient("ws", config.Server, config.Port, config.Debug)
+	client.Login(&api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
 
 	return client
 }
@@ -126,8 +137,9 @@ func getIDByName(name string) (string, error) {
 			log.Printf("ERROR: get channel id for name %s err: %s\n", name, err)
 			return "", err
 		}
+		//log.Printf("Channel ID: %s\n", channel.ID)
 		return channel.ID, nil
-		break
+		//		break
 	case lockSign:
 		group, err := getGroupByName(string([]rune(name)[1:]))
 		if err != nil {
@@ -135,7 +147,7 @@ func getIDByName(name string) (string, error) {
 			return "", err
 		}
 		return group.ID, nil
-		break
+		//		break
 	default:
 		user, err := getUserByName(name)
 		if err != nil {
@@ -145,7 +157,7 @@ func getIDByName(name string) (string, error) {
 		return user.ID, nil
 	}
 
-	return "", nil
+	//	return "", nil
 }
 
 func getHistoryByName(name string) ([]api.Message, error) {
@@ -156,8 +168,13 @@ func getHistoryByName(name string) ([]api.Message, error) {
 }
 
 func postByName(name string, text string) {
-	rID, _ := getIDByName(name)
-	_, err := client.Chat().Post(&rest.ChatPostOptions{Channel: rID, Text: text})
+	roomID, err := getIDByName(name)
+	if err != nil {
+		log.Printf("can't get room by name %s: %s\n", name, err)
+		return
+	}
+	room := api.Channel{ID: roomID}
+	_, err = clientRT.SendMessage(&room, text)
 	if err != nil {
 		if config.Debug {
 			log.Printf("send message err: %s\n", err)
@@ -248,29 +265,41 @@ func getNewMessages(c *rest.Client) []api.Message {
 	return result
 }
 
-func subscribeToUpdates(c *rest.Client, freq time.Duration) chan []api.Message {
-	msgChan := make(chan []api.Message, 1024)
+func subscribeToUpdates(c *rest.Client, freq time.Duration) chan api.Message {
+	msgChan := make(chan api.Message, 1024)
+
+	// Subscribe to message stream
+	allMessages := api.Channel{ID: "__my_messages__"}
+	msgChan, _ = clientRT.SubscribeToMessageStream(&allMessages)
+
 	go func() {
-		for {
-			msgs := getNewMessages(c)
-			msgChan <- msgs
-			for _, msg := range msgs {
-				//log.Printf("CurrentChatID: %s\n", currentChatID)
-				//log.Printf("Incoming message: %+v\n", msg)
-				if msg.ChannelID == currentChatID || msg.ChannelID == currentChatID+currentChatID {
-					text := strings.Replace(msg.Text, "&nbsp;", "", -1)
-					text = strings.Replace(text, "<", "", -1)
-					text = strings.Replace(text, ">", "", -1)
-					//log.Printf("Text: %s\n", text)
-					text = fmt.Sprintf("<b>%s</b> <i>%s</i>\n%s", msg.User.Name, msg.Timestamp.Format("2006-01-02 15:04:05"), text)
-					addToList(chatStore, text)
-				}
-				//TODO Request error: 429 Too Many Requests
-				time.Sleep(80)
-			}
-			time.Sleep(freq * time.Millisecond)
+		var msg api.Message
+
+		msg = <-msgChan
+		//log.Printf("CurrentChatID: %s\n", currentChatID)
+		//log.Printf("Incoming message: %+v\n", msg)
+
+		chat, ok := allHistory[msg.ChannelID]
+		if ok {
+			chat.lastTime = msg.Timestamp.String()
+			chat.msgs = append(chat.msgs, msg)
+		} else {
+			msgs := make([]api.Message, 1)
+			msgs = append(msgs, msg)
+			chat = chatHistory{lastTime: msg.Timestamp.String(), msgs: msgs}
+		}
+		allHistory[msg.ChannelID] = chat
+
+		if msg.ChannelID == currentChatID || msg.ChannelID == currentChatID+currentChatID {
+			text := strings.Replace(msg.Text, "&nbsp;", "", -1)
+			text = strings.Replace(text, "<", "", -1)
+			text = strings.Replace(text, ">", "", -1)
+			//log.Printf("Text: %s\n", text)
+			text = fmt.Sprintf("<b>%s</b> <i>%s</i>\n%s", msg.User.Name, msg.Timestamp.Format("2006-01-02 15:04:05"), text)
+			addToList(chatStore, text)
 		}
 	}()
+
 	return msgChan
 }
 
