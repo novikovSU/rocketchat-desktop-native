@@ -275,28 +275,30 @@ func subscribeToUpdates(c *rest.Client, freq time.Duration) chan api.Message {
 	go func() {
 		var msg api.Message
 
-		msg = <-msgChan
-		//log.Printf("CurrentChatID: %s\n", currentChatID)
-		//log.Printf("Incoming message: %+v\n", msg)
+		for {
+			msg = <-msgChan
+			//log.Printf("CurrentChatID: %s\n", currentChatID)
+			//log.Printf("Incoming message: %+v\n", msg)
 
-		chat, ok := allHistory[msg.ChannelID]
-		if ok {
-			chat.lastTime = msg.Timestamp.String()
-			chat.msgs = append(chat.msgs, msg)
-		} else {
-			msgs := make([]api.Message, 1)
-			msgs = append(msgs, msg)
-			chat = chatHistory{lastTime: msg.Timestamp.String(), msgs: msgs}
-		}
-		allHistory[msg.ChannelID] = chat
+			chat, ok := allHistory[msg.ChannelID]
+			if ok {
+				chat.lastTime = msg.Timestamp.String()
+				chat.msgs = append(chat.msgs, msg)
+			} else {
+				msgs := make([]api.Message, 1)
+				msgs = append(msgs, msg)
+				chat = chatHistory{lastTime: msg.Timestamp.String(), msgs: msgs}
+			}
+			allHistory[msg.ChannelID] = chat
 
-		if msg.ChannelID == currentChatID || msg.ChannelID == currentChatID+currentChatID {
-			text := strings.Replace(msg.Text, "&nbsp;", "", -1)
-			text = strings.Replace(text, "<", "", -1)
-			text = strings.Replace(text, ">", "", -1)
-			//log.Printf("Text: %s\n", text)
-			text = fmt.Sprintf("<b>%s</b> <i>%s</i>\n%s", msg.User.Name, msg.Timestamp.Format("2006-01-02 15:04:05"), text)
-			addToList(chatStore, text)
+			if msg.ChannelID == currentChatID || msg.ChannelID == currentChatID+currentChatID {
+				text := strings.Replace(msg.Text, "&nbsp;", "", -1)
+				text = strings.Replace(text, "<", "", -1)
+				text = strings.Replace(text, ">", "", -1)
+				//log.Printf("Text: %s\n", text)
+				text = fmt.Sprintf("<b>%s</b> <i>%s</i>\n%s", msg.User.Name, msg.Timestamp.Format("2006-01-02 15:04:05"), text)
+				addToList(chatStore, text)
+			}
 		}
 	}()
 
