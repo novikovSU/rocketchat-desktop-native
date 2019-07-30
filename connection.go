@@ -53,7 +53,7 @@ func createModal(id string) *gtk.Dialog {
 func createConfig() *Config {
 	//TODO validation
 	config := createDefaultConfig()
-	config.Server = getInputTextValue("server_input_text")
+	config.RestServer = getInputTextValue("server_input_text")
 	config.User = getInputTextValue("login_input_text")
 	config.Email = getInputTextValue("e_mail_input_text")
 	config.Password = getInputTextValue("password_input_text")

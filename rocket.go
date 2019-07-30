@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"./events"
+	"./bus"
 
 	"github.com/novikovSU/gorocket/api"
 	"github.com/novikovSU/gorocket/realtime"
@@ -45,7 +45,7 @@ func initRocket() {
 }
 
 func initRESTConnection() *rest.Client {
-	client := rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
+	client := rest.NewClient(config.RestServer, config.RestPort, config.UseTLS, config.Debug)
 	err := client.Login(api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
 	if err != nil {
 		log.Fatalf("login err: %s\n", err)
@@ -55,7 +55,7 @@ func initRESTConnection() *rest.Client {
 }
 
 func initRTConnection() *realtime.Client {
-	client, _ := realtime.NewClient("ws", config.Server, config.Port, config.Debug)
+	client, _ := realtime.NewClient("ws", config.RTServer, config.RTPort, config.Debug)
 	client.Login(&api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
 
 	return client
@@ -72,7 +72,7 @@ func getConnection() (err error) {
 
 //deprecated
 func getConnectionSafe(config *Config) error {
-	client = rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
+	client = rest.NewClient(config.RestServer, config.RestPort, config.UseTLS, config.Debug)
 	return client.Login(api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
 }
 
@@ -379,50 +379,32 @@ func loadGroups() {
 
 func addUser(user *api.User) {
 	users[user.ID] = user
-
-	//TODO how convert it in one-line?!
-	var u interface{} = user
-	events.RaiseEvent("addUser", []*interface{}{&u})
+	bus.Bus.Publish("addUser", user)
 }
 
 func removeUser(user *api.User) {
 	delete(users, user.ID)
-
-	//TODO how convert it in one-line?!
-	var u interface{} = user
-	events.RaiseEvent("removeUser", []*interface{}{&u})
+	bus.Bus.Publish("removeUser", user)
 }
 
 func addChannel(channel *api.Channel) {
 	channels[channel.ID] = channel
-
-	//TODO how convert it in one-line?!
-	var ch interface{} = channel
-	events.RaiseEvent("addChannel", []*interface{}{&ch})
+	bus.Bus.Publish("addChannel", channel)
 }
 
 func removeChannel(channel *api.Channel) {
 	delete(channels, channel.ID)
-
-	//TODO how convert it in one-line?!
-	var ch interface{} = channel
-	events.RaiseEvent("removeChannel", []*interface{}{&ch})
+	bus.Bus.Publish("removeChannel", channel)
 }
 
 func addGroup(group *api.Group) {
 	groups[group.ID] = group
-
-	//TODO how convert it in one-line?!
-	var g interface{} = group
-	events.RaiseEvent("addGroup", []*interface{}{&g})
+	bus.Bus.Publish("addGroup", group)
 }
 
 func removeGroup(group *api.Group) {
 	delete(groups, group.ID)
-
-	//TODO how convert it in one-line?!
-	var g interface{} = group
-	events.RaiseEvent("removeGroup", []*interface{}{&g})
+	bus.Bus.Publish("removeGroup", group)
 }
 
 /*---------------------------------------------------------------------------
