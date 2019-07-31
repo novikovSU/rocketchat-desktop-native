@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/novikovSU/gorocket/api"
+	"github.com/novikovSU/rocketchat-desktop-native/bus"
 	"io/ioutil"
 	"log"
 
@@ -12,16 +14,14 @@ var (
 )
 
 func onSysTrayReady() {
-	icondData, err := ioutil.ReadFile("resources/icon.ico")
-	if err != nil {
-		log.Println("Could not load icon. err: %s\n", err)
-	} else {
-		systray.SetIcon(icondData)
+	err := setIcon("icon.ico")
+	if err == nil {
 		systray.SetTooltip("Rocket.Chat Desktop native")
 
 		showMenuItem = systray.AddMenuItem("Show", "Show chat window")
 		quitMenuItem = systray.AddMenuItem("Quit", "Quit")
 
+		bus.SubscribeAsync("messages.new", onNewMessage)
 		go handleMenuItemEvents()
 	}
 }
@@ -50,4 +50,22 @@ func onShowMenuItemClicked() {
 func onQuitMenuItemClicked() {
 	GtkApplication.Quit()
 	systray.Quit()
+}
+
+func onNewMessage(msg api.Message) {
+	//TODO we need event handler to reset icon to normal state then all unread messages will be read
+	_ = setIcon("iconExcited.ico")
+}
+
+//--------------------------------------------------------
+
+func setIcon(name string) error {
+	icondData, err := ioutil.ReadFile("resources/" + name)
+	if err != nil {
+		log.Println("Could not load icon %s. err: %s\n", name, err)
+	} else {
+		systray.SetIcon(icondData)
+	}
+
+	return err
 }

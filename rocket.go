@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"./bus"
+	"github.com/novikovSU/rocketchat-desktop-native/bus"
 
 	"github.com/novikovSU/gorocket/api"
 	"github.com/novikovSU/gorocket/realtime"
@@ -299,6 +299,8 @@ func subscribeToUpdates(c *rest.Client, freq time.Duration) chan api.Message {
 				text = fmt.Sprintf("<b>%s</b> <i>%s</i>\n%s", msg.User.Name, msg.Timestamp.Format("2006-01-02 15:04:05"), text)
 				addToList(chatStore, text)
 			}
+
+			bus.Publish("messages.new", msg)
 		}
 	}()
 
@@ -379,32 +381,32 @@ func loadGroups() {
 
 func addUser(user *api.User) {
 	users[user.ID] = user
-	bus.Bus.Publish("addUser", user)
+	bus.Publish("contacts.users.added", user)
 }
 
 func removeUser(user *api.User) {
 	delete(users, user.ID)
-	bus.Bus.Publish("removeUser", user)
+	bus.Publish("contacts.users.removed", user)
 }
 
 func addChannel(channel *api.Channel) {
 	channels[channel.ID] = channel
-	bus.Bus.Publish("addChannel", channel)
+	bus.Publish("contacts.channels.added", channel)
 }
 
 func removeChannel(channel *api.Channel) {
 	delete(channels, channel.ID)
-	bus.Bus.Publish("removeChannel", channel)
+	bus.Publish("contacts.channels.removed", channel)
 }
 
 func addGroup(group *api.Group) {
 	groups[group.ID] = group
-	bus.Bus.Publish("addGroup", group)
+	bus.Publish("contacts.groups.added", group)
 }
 
 func removeGroup(group *api.Group) {
 	delete(groups, group.ID)
-	bus.Bus.Publish("removeGroup", group)
+	bus.Publish("contacts.groups.removed", group)
 }
 
 /*---------------------------------------------------------------------------
