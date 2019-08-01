@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/novikovSU/rocketchat-desktop-native/bus"
+	"github.com/novikovSU/rocketchat-desktop-native/model"
 	"log"
 	"sort"
 	"strings"
@@ -10,17 +12,17 @@ import (
 	"github.com/novikovSU/gorocket/api"
 )
 
-var (
+const (
 	hashSign = "\u0023"     // Hash sign for channels
 	lockSign = "\U0001F512" // Lock sign for private groups
 )
 
 // NameSorter sorts users by name.
-type NameSorter []api.User
+type NameSorter []model.UserModel
 
 func (a NameSorter) Len() int           { return len(a) }
 func (a NameSorter) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a NameSorter) Less(i, j int) bool { return a[i].Name < a[j].Name }
+func (a NameSorter) Less(i, j int) bool { return a[i].User.Name < a[j].User.Name }
 
 // DateSorter sorts messages by timestamp.
 type DateSorter []api.Message
@@ -29,35 +31,25 @@ func (a DateSorter) Len() int           { return len(a) }
 func (a DateSorter) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a DateSorter) Less(i, j int) bool { return a[i].Timestamp.Before(*a[j].Timestamp) }
 
-func fillContactList(cs *gtk.ListStore) {
-	cs.Clear()
-	channels, err := client.Channel().List()
-	if err != nil {
-		log.Printf("Can't get channels: %s\n", err)
-	}
-	for _, channel := range channels {
-		addToList(cs, "#"+channel.Name)
-	}
+func initContactListSubscribers(cs *gtk.ListStore) {
+	//TODO react to remove users/groups/channels
 
-	groups, err := client.Groups().ListGroups()
-	if err != nil {
-		log.Printf("Can't get groups: %s\n", err)
-	}
-	for _, group := range groups {
-		addToList(cs, lockSign+group.Name)
-	}
-
-	users, err := client.Users().List()
-	if err != nil {
-		log.Printf("Can't get ims: %s\n", err)
-	}
-	sort.Sort(NameSorter(users))
-
-	for _, user := range users {
-		if user.Name != "" {
-			addToList(cs, user.Name)
+	bus.SubscribeAsync(bus.Contacts_update_finished, func() {
+		cs.Clear()
+		for _, channel := range model.Chat.Channels {
+			addToList(cs, hashSign+channel.Channel.Name)
 		}
-	}
+
+		for _, group := range model.Chat.Groups {
+			addToList(cs, lockSign+group.Group.Name)
+		}
+
+		for _, user := range getSortedUsers() {
+			if user.User.Name != "" {
+				addToList(cs, user.User.Name)
+			}
+		}
+	})
 }
 
 func fillChat(cs *gtk.ListStore, name string) {
@@ -84,4 +76,14 @@ func fillChat(cs *gtk.ListStore, name string) {
 
 func showUpdates(cs *gtk.ListStore) {
 
+}
+
+func getSortedUsers() []model.UserModel {
+	users := make([]model.UserModel, 0, len(model.Chat.Users))
+	for _, u := range model.Chat.Users {
+		users = append(users, u)
+	}
+	sort.Sort(NameSorter(users))
+
+	return users
 }

@@ -10,6 +10,8 @@ Application has event-oriented architecture. Full Event list:
 |---------------------------|-------------|------------------------------------------------------------------------------|
 | messages.new              | api.Message | Fires then application received new chat message                             |
 | messages.read             | api.Message | Fires then user read the chat message **(Not implemented yet)**              |
+| contacts.update.started   |             | Fires then application starts to load/update contact list                    |
+| contacts.update.finished  |             | Fires then application finish to load/update contact list                    |
 | contacts.users.added      | api.User    | Fires then application detects new user has been added to server             |
 | contacts.users.removed    | api.User    | Fires then application detects existing user has been removed from server    |
 | contacts.channels.added   | api.Channel | Fires then application detects new channel has been added to server          |

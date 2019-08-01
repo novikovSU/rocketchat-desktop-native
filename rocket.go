@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/novikovSU/rocketchat-desktop-native/bus"
+	"github.com/novikovSU/rocketchat-desktop-native/model"
 
 	"github.com/novikovSU/gorocket/api"
 	"github.com/novikovSU/gorocket/realtime"
@@ -15,7 +16,7 @@ import (
 )
 
 const (
-	contactListUpdateInterval = 45 * time.Second
+	contactListUpdateInterval = 45 * time.Minute
 )
 
 var (
@@ -27,10 +28,6 @@ var (
 	allHistory    map[string]chatHistory
 	pullChan      chan api.Message
 	currentChatID string
-
-	users    = make(map[string]*api.User)
-	channels = make(map[string]*api.Channel)
-	groups   = make(map[string]*api.Group)
 )
 
 type chatHistory struct {
@@ -300,7 +297,7 @@ func subscribeToUpdates(c *rest.Client, freq time.Duration) chan api.Message {
 				addToList(chatStore, text)
 			}
 
-			bus.Publish("messages.new", msg)
+			bus.Publish(bus.Messages_new, msg)
 		}
 	}()
 
@@ -314,9 +311,12 @@ Stay active for changes. Use subscribers to get them
 func loadContactListAsync() {
 	go func() {
 		for {
+			bus.Publish(bus.Contacts_update_started)
 			loadUsers()
 			loadChannels()
 			loadGroups()
+			bus.Publish(bus.Contacts_update_finished)
+
 			time.Sleep(contactListUpdateInterval)
 		}
 	}()
@@ -328,15 +328,16 @@ func loadUsers() {
 		log.Printf("Can't get users: %s\n", err)
 	}
 
-	for _, existsUser := range users {
-		if !containsUser(&restUsers, existsUser) {
-			removeUser(existsUser)
+	for _, existsUser := range model.Chat.Users {
+		if !containsUser(&restUsers, &existsUser) {
+			model.Chat.RemoveUser(existsUser.User)
+			bus.Publish(bus.Contacts_users_removed, existsUser.User)
 		}
 	}
 
 	for _, restUser := range restUsers {
-		if users[restUser.ID] == nil {
-			addUser(&restUser)
+		if model.Chat.AddUser(restUser) {
+			bus.Publish(bus.Contacts_users_added, restUser)
 		}
 	}
 }
@@ -347,15 +348,16 @@ func loadChannels() {
 		log.Printf("Can't get channels: %s\n", err)
 	}
 
-	for _, existsChannel := range channels {
-		if !containsChannel(&restChannels, existsChannel) {
-			removeChannel(existsChannel)
+	for _, existsChannel := range model.Chat.Channels {
+		if !containsChannel(&restChannels, &existsChannel) {
+			model.Chat.RemoveChannel(existsChannel.Channel)
+			bus.Publish(bus.Contacts_channels_removed, existsChannel.Channel)
 		}
 	}
 
 	for _, restChannel := range restChannels {
-		if channels[restChannel.ID] == nil {
-			addChannel(&restChannel)
+		if model.Chat.AddChannel(restChannel) {
+			bus.Publish(bus.Contacts_channels_added, restChannel)
 		}
 	}
 }
@@ -366,47 +368,18 @@ func loadGroups() {
 		log.Printf("Can't get groups: %s\n", err)
 	}
 
-	for _, existsGroup := range groups {
-		if !containsGroup(&restGroups, existsGroup) {
-			removeGroup(existsGroup)
+	for _, existsGroup := range model.Chat.Groups {
+		if !containsGroup(&restGroups, &existsGroup) {
+			model.Chat.RemoveGroup(existsGroup.Group)
+			bus.Publish(bus.Contacts_groups_removed, existsGroup.Group)
 		}
 	}
 
 	for _, restGroup := range restGroups {
-		if groups[restGroup.ID] == nil {
-			addGroup(&restGroup)
+		if model.Chat.AddGroup(restGroup) {
+			bus.Publish(bus.Contacts_groups_added, restGroup)
 		}
 	}
-}
-
-func addUser(user *api.User) {
-	users[user.ID] = user
-	bus.Publish("contacts.users.added", user)
-}
-
-func removeUser(user *api.User) {
-	delete(users, user.ID)
-	bus.Publish("contacts.users.removed", user)
-}
-
-func addChannel(channel *api.Channel) {
-	channels[channel.ID] = channel
-	bus.Publish("contacts.channels.added", channel)
-}
-
-func removeChannel(channel *api.Channel) {
-	delete(channels, channel.ID)
-	bus.Publish("contacts.channels.removed", channel)
-}
-
-func addGroup(group *api.Group) {
-	groups[group.ID] = group
-	bus.Publish("contacts.groups.added", group)
-}
-
-func removeGroup(group *api.Group) {
-	delete(groups, group.ID)
-	bus.Publish("contacts.groups.removed", group)
 }
 
 /*---------------------------------------------------------------------------
@@ -414,9 +387,9 @@ Very common and dummy functions
 TODO codgen?
 ---------------------------------------------------------------------------*/
 
-func containsUser(users *[]api.User, cmpUser *api.User) bool {
+func containsUser(users *[]api.User, cmpUser *model.UserModel) bool {
 	for _, user := range *users {
-		if strings.Compare(user.ID, cmpUser.ID) == 0 {
+		if strings.Compare(user.ID, cmpUser.User.ID) == 0 {
 			return true
 		}
 
@@ -424,9 +397,9 @@ func containsUser(users *[]api.User, cmpUser *api.User) bool {
 	return false
 }
 
-func containsChannel(channels *[]api.Channel, cmpChannel *api.Channel) bool {
+func containsChannel(channels *[]api.Channel, cmpChannel *model.ChannelModel) bool {
 	for _, channel := range *channels {
-		if strings.Compare(channel.ID, cmpChannel.ID) == 0 {
+		if strings.Compare(channel.ID, cmpChannel.Channel.ID) == 0 {
 			return true
 		}
 
@@ -434,9 +407,9 @@ func containsChannel(channels *[]api.Channel, cmpChannel *api.Channel) bool {
 	return false
 }
 
-func containsGroup(groups *[]api.Group, cmpGroup *api.Group) bool {
+func containsGroup(groups *[]api.Group, cmpGroup *model.GroupModel) bool {
 	for _, group := range *groups {
-		if strings.Compare(group.ID, cmpGroup.ID) == 0 {
+		if strings.Compare(group.ID, cmpGroup.Group.ID) == 0 {
 			return true
 		}
 

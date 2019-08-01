@@ -269,7 +269,7 @@ func openMainWindow(app *gtk.Application) {
 	// ------------------
 
 	contactsStore := initList(contactList)
-	fillContactList(contactsStore)
+	initContactListSubscribers(contactsStore)
 
 	chatStore = initList(chatList)
 
