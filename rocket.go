@@ -297,7 +297,7 @@ func subscribeToUpdates(c *rest.Client, freq time.Duration) chan api.Message {
 				addToList(chatStore, text)
 			}
 
-			bus.Publish(bus.Messages_new, msg)
+			bus.Pub(bus.Messages_new, msg)
 		}
 	}()
 
@@ -311,11 +311,11 @@ Stay active for changes. Use subscribers to get them
 func loadContactListAsync() {
 	go func() {
 		for {
-			bus.Publish(bus.Contacts_update_started)
+			bus.Pub(bus.Contacts_update_started)
 			loadUsers()
 			loadChannels()
 			loadGroups()
-			bus.Publish(bus.Contacts_update_finished)
+			bus.Pub(bus.Contacts_update_finished)
 
 			time.Sleep(contactListUpdateInterval)
 		}
@@ -331,13 +331,13 @@ func loadUsers() {
 	for _, existsUser := range model.Chat.Users {
 		if !containsUser(&restUsers, &existsUser) {
 			model.Chat.RemoveUser(existsUser.User)
-			bus.Publish(bus.Contacts_users_removed, existsUser.User)
+			bus.Pub(bus.Contacts_users_removed, existsUser.User)
 		}
 	}
 
 	for _, restUser := range restUsers {
 		if model.Chat.AddUser(restUser) {
-			bus.Publish(bus.Contacts_users_added, restUser)
+			bus.Pub(bus.Contacts_users_added, restUser)
 		}
 	}
 }
@@ -351,13 +351,13 @@ func loadChannels() {
 	for _, existsChannel := range model.Chat.Channels {
 		if !containsChannel(&restChannels, &existsChannel) {
 			model.Chat.RemoveChannel(existsChannel.Channel)
-			bus.Publish(bus.Contacts_channels_removed, existsChannel.Channel)
+			bus.Pub(bus.Contacts_channels_removed, existsChannel.Channel)
 		}
 	}
 
 	for _, restChannel := range restChannels {
 		if model.Chat.AddChannel(restChannel) {
-			bus.Publish(bus.Contacts_channels_added, restChannel)
+			bus.Pub(bus.Contacts_channels_added, restChannel)
 		}
 	}
 }
@@ -371,13 +371,13 @@ func loadGroups() {
 	for _, existsGroup := range model.Chat.Groups {
 		if !containsGroup(&restGroups, &existsGroup) {
 			model.Chat.RemoveGroup(existsGroup.Group)
-			bus.Publish(bus.Contacts_groups_removed, existsGroup.Group)
+			bus.Pub(bus.Contacts_groups_removed, existsGroup.Group)
 		}
 	}
 
 	for _, restGroup := range restGroups {
 		if model.Chat.AddGroup(restGroup) {
-			bus.Publish(bus.Contacts_groups_added, restGroup)
+			bus.Pub(bus.Contacts_groups_added, restGroup)
 		}
 	}
 }

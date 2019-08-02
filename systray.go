@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/novikovSU/gorocket/api"
-	"github.com/novikovSU/rocketchat-desktop-native/bus"
 	"io/ioutil"
 	"log"
+
+	"github.com/novikovSU/gorocket/api"
+	"github.com/novikovSU/rocketchat-desktop-native/bus"
 
 	"github.com/getlantern/systray"
 )
@@ -21,7 +22,7 @@ func onSysTrayReady() {
 		showMenuItem = systray.AddMenuItem("Show", "Show chat window")
 		quitMenuItem = systray.AddMenuItem("Quit", "Quit")
 
-		bus.SubscribeAsync("messages.new", onNewMessage)
+		bus.Sub("messages.new", onNewMessage)
 		go handleMenuItemEvents()
 	}
 }
