@@ -29,7 +29,7 @@ type ChatModel struct {
 }
 
 var (
-	Chat = ChatModel{Users: make(map[string]UserModel), Channels: make(map[string]ChannelModel), Groups: make(map[string]GroupModel)}
+	Chat ChatModel
 )
 
 func (chat *ChatModel) AddUser(usr api.User) bool {
@@ -84,4 +84,8 @@ func (chat *ChatModel) RemoveGroup(gr api.Group) bool {
 	}
 
 	return false
+}
+
+func init() {
+	Chat = ChatModel{Users: make(map[string]UserModel), Channels: make(map[string]ChannelModel), Groups: make(map[string]GroupModel)}
 }

@@ -2,15 +2,16 @@ package main
 
 import (
 	"errors"
+	"log"
+	"os"
+	"regexp"
+	"strings"
+
 	"github.com/getlantern/systray"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/pango"
-	"log"
-	"os"
-	"regexp"
-	"strings"
 )
 
 const appID = "com.github.novikovSU.rocketchat-desktop-native"
@@ -22,11 +23,15 @@ const (
 )
 
 var (
-	GtkApplication gtk.Application
+	GtkApplication *gtk.Application
 	GtkBuilder     gtk.Builder
 	MainWindow     *gtk.Window
-	ctrlPressed    = false
-	chatStore      *gtk.ListStore
+	notif          *glib.Notification
+
+	contactsStore *gtk.ListStore
+	chatStore     *gtk.ListStore
+
+	ctrlPressed = false
 )
 
 func initList(list *gtk.TreeView) *gtk.ListStore {
@@ -120,22 +125,16 @@ func onMainWindowDestroy() {
 }
 
 func main() {
+
 	// Get application config
 	config, _ = getConfig()
-
-	// Get Rocket.Chat connection
-	initRocket()
-
-	// Init chat history
-	allHistory = make(map[string]chatHistory)
-	_ = getNewMessages(client)
 
 	// Create a new application.
 	app, err := gtk.ApplicationNew(appID, glib.APPLICATION_FLAGS_NONE)
 	if err != nil {
 		log.Panic(err)
 	}
-	GtkApplication = *app
+	GtkApplication = app
 
 	// Connect function to application startup event, this is not required.
 	app.Connect("startup", func() {
@@ -155,6 +154,13 @@ func main() {
 			OpenConnectionWindow()
 		}
 
+		initUI()
+
+		// Get Rocket.Chat connection
+		initRocket()
+
+		subscribeToUpdates()
+
 		systray.Run(onSysTrayReady, onSysTrayExit)
 	})
 
@@ -170,9 +176,7 @@ func main() {
 func openMainWindow(app *gtk.Application) {
 	log.Println("application activate")
 
-	notif := glib.NotificationNew("Rocket.Chat Desktop native")
-	notif.SetBody("application activate")
-	app.SendNotification(appID, notif)
+	notif = glib.NotificationNew("Rocket.Chat Desktop native")
 
 	win := CreateWindow("main_window")
 	MainWindow = win
@@ -268,8 +272,7 @@ func openMainWindow(app *gtk.Application) {
 	textInput := GetTextView("text_input")
 	// ------------------
 
-	contactsStore := initList(contactList)
-	initContactListSubscribers(contactsStore)
+	contactsStore = initList(contactList)
 
 	chatStore = initList(chatList)
 
@@ -314,7 +317,7 @@ func openMainWindow(app *gtk.Application) {
 				match, _ := regexp.MatchString("^(\\s*)$", inputText)
 				if !match {
 					selectionText := getSelectionText(contactsSelection)
-					postByName(selectionText, inputText)
+					postByNameREST(selectionText, inputText)
 					buffer.SetText("")
 				}
 			}
@@ -325,8 +328,6 @@ func openMainWindow(app *gtk.Application) {
 			//log.Printf("Keycode: %d\n", keyEvent.KeyVal())
 		}
 	})
-
-	pullChan = subscribeToUpdates(client, 500)
 
 	win.ShowAll()
 	app.AddWindow(win)

@@ -10,15 +10,13 @@ import (
 
 // Config -- AAA
 type Config struct {
-	RestServer string `json:"restserver"`
-	RestPort   string `json:"restport"`
-	RTServer   string `json:"rtserver"`
-	RTPort     string `json:"rtport"`
-	User       string `json:"user"`
-	Email      string `json:"email"`
-	Password   string `json:"password"`
-	UseTLS     bool   `json:"use_tls,omitempty"`
-	Debug      bool   `json:"debug,omitempty"`
+	Server   string `json:"server"`
+	Port     string `json:"port"`
+	User     string `json:"user"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	UseTLS   bool   `json:"use_tls,omitempty"`
+	Debug    bool   `json:"debug,omitempty"`
 }
 
 var (

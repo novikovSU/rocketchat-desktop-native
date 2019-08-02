@@ -2,10 +2,11 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 	"time"
+
+	bolt "go.etcd.io/bbolt"
 
 	"github.com/novikovSU/rocketchat-desktop-native/bus"
 	"github.com/novikovSU/rocketchat-desktop-native/model"
@@ -38,11 +39,12 @@ type chatHistory struct {
 func initRocket() {
 	client = initRESTConnection()
 	clientRT = initRTConnection()
+	me = getSelfInfo()
 	loadContactListAsync()
 }
 
 func initRESTConnection() *rest.Client {
-	client := rest.NewClient(config.RestServer, config.RestPort, config.UseTLS, config.Debug)
+	client := rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
 	err := client.Login(api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
 	if err != nil {
 		log.Fatalf("login err: %s\n", err)
@@ -52,10 +54,23 @@ func initRESTConnection() *rest.Client {
 }
 
 func initRTConnection() *realtime.Client {
-	client, _ := realtime.NewClient("ws", config.RTServer, config.RTPort, config.Debug)
+	proto := "ws"
+	if config.UseTLS {
+		proto = "wss"
+	}
+	client, _ := realtime.NewClient(proto, config.Server, config.Port, config.Debug)
 	client.Login(&api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
 
 	return client
+}
+
+func getSelfInfo() *api.User {
+	user, err := getUserByUsername(config.User)
+	if err != nil {
+		log.Printf("can't get self info: %s\n", err)
+	}
+
+	return user
 }
 
 //deprecated
@@ -69,7 +84,7 @@ func getConnection() (err error) {
 
 //deprecated
 func getConnectionSafe(config *Config) error {
-	client = rest.NewClient(config.RestServer, config.RestPort, config.UseTLS, config.Debug)
+	client = rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
 	return client.Login(api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
 }
 
@@ -124,6 +139,22 @@ func getUserByName(name string) (*api.User, error) {
 	return nil, errors.New("can't find user by name")
 }
 
+func getUserByUsername(username string) (*api.User, error) {
+	users, err := client.Users().List()
+	if err != nil {
+		log.Printf("ERROR: can't get users list from server: %s\n", err)
+		return nil, err
+	}
+
+	for _, user := range users {
+		if user.UserName == username {
+			return &user, nil
+		}
+	}
+
+	return nil, errors.New("can't find user by name")
+}
+
 func getIDByName(name string) (string, error) {
 	firstSymbol := string([]rune(name)[0])
 
@@ -157,6 +188,38 @@ func getIDByName(name string) (string, error) {
 	//	return "", nil
 }
 
+func getRIDByName(name string) (string, error) {
+	firstSymbol := string([]rune(name)[0])
+
+	switch firstSymbol {
+	case hashSign:
+		channel, err := getChannelByName(string([]rune(name)[1:]))
+		if err != nil {
+			log.Printf("ERROR: get channel id for name %s err: %s\n", name, err)
+			return "", err
+		}
+		//log.Printf("Channel ID: %s\n", channel.ID)
+		return channel.ID, nil
+		//		break
+	case lockSign:
+		group, err := getGroupByName(string([]rune(name)[1:]))
+		if err != nil {
+			log.Printf("ERROR: get group id for name %s err: %s\n", name, err)
+			return "", err
+		}
+		return group.ID, nil
+		//		break
+	default:
+		user, err := getUserByName(name)
+		if err != nil {
+			log.Printf("ERROR: get user id for name %s err: %s\n", name, err)
+			return "", err
+		}
+		return me.ID + user.ID, nil
+	}
+	//	return "", nil
+}
+
 func getHistoryByName(name string) ([]api.Message, error) {
 	var msgs []api.Message
 	rID, _ := getIDByName(name)
@@ -164,14 +227,8 @@ func getHistoryByName(name string) ([]api.Message, error) {
 	return msgs, nil
 }
 
-func postByName(name string, text string) {
-	roomID, err := getIDByName(name)
-	if err != nil {
-		log.Printf("can't get room by name %s: %s\n", name, err)
-		return
-	}
-	room := api.Channel{ID: roomID}
-	_, err = clientRT.SendMessage(&room, text)
+func postByNameREST(name string, text string) {
+	_, err := client.Chat().Post(&rest.ChatPostOptions{Channel: currentChatID, Text: text})
 	if err != nil {
 		if config.Debug {
 			log.Printf("send message err: %s\n", err)
@@ -179,8 +236,21 @@ func postByName(name string, text string) {
 	}
 }
 
+func postByNameRT(name string, text string) {
+	roomID, err := getRIDByName(name)
+	if err != nil {
+		log.Printf("can't get room by name %s: %s\n", name, err)
+		return
+	}
+	room := api.Channel{ID: currentChatID}
+	_, err = clientRT.SendMessage(&room, text)
+	if err != nil {
+		log.Printf("send message (to: %s[%s], text: %s) err: %s\n", name, roomID, text, err)
+	}
+}
+
 func ownMessage(c *Config, msg api.Message) bool {
-	return c.User == msg.User.UserName
+	return me.ID == msg.User.ID
 }
 
 func getNewMessages(c *rest.Client) []api.Message {
@@ -262,7 +332,93 @@ func getNewMessages(c *rest.Client) []api.Message {
 	return result
 }
 
-func subscribeToUpdates(c *rest.Client, freq time.Duration) chan api.Message {
+func getHistoryByID(id string) ([]api.Message, error) {
+	msgs, err := clientRT.LoadHistory(&realtime.HistoryOptions{RoomID: id})
+	if err != nil {
+		log.Printf("ERROR: get messages for room with id (%s) err: %s\n", id, err)
+		return nil, err
+	}
+
+	return msgs, nil
+}
+
+func getNewMessagesRT(c *realtime.Client) []api.Message {
+
+	var result []api.Message
+
+	for _, channel := range model.Chat.Channels {
+		/*var lastTime string
+		if hist, ok := allHistory[channel.ID]; ok {
+			lastTime = hist.lastTime
+		}*/
+		msgs, err := c.LoadHistory(&realtime.HistoryOptions{RoomID: channel.Channel.ID})
+		if err != nil {
+			log.Printf("ERROR: get messages from channel %s err: %s\n", channel.Channel.Name, err)
+		} else {
+			if len(msgs) != 0 {
+				chat, ok := allHistory[channel.Channel.ID]
+				if ok {
+					chat.lastTime = msgs[0].Timestamp.String()
+					chat.msgs = append(chat.msgs, msgs...)
+				} else {
+					chat = chatHistory{lastTime: msgs[0].Timestamp.String(), msgs: msgs}
+				}
+				allHistory[channel.Channel.ID] = chat
+				result = append(result, msgs...)
+			}
+		}
+	}
+
+	for _, group := range model.Chat.Groups {
+		/*var lastTime string
+		if hist, ok := allHistory[group.ID]; ok {
+			lastTime = hist.lastTime
+		}*/
+		msgs, err := c.LoadHistory(&realtime.HistoryOptions{RoomID: group.Group.ID})
+		if err != nil {
+			log.Printf("ERROR: get messages from group %s err: %s\n", group.Group.Name, err)
+		} else {
+			if len(msgs) != 0 {
+				chat, ok := allHistory[group.Group.ID]
+				if ok {
+					chat.lastTime = msgs[0].Timestamp.String()
+					chat.msgs = append(chat.msgs, msgs...)
+				} else {
+					chat = chatHistory{lastTime: msgs[0].Timestamp.String(), msgs: msgs}
+				}
+				allHistory[group.Group.ID] = chat
+				result = append(result, msgs...)
+			}
+		}
+	}
+
+	for _, user := range model.Chat.Users {
+		/*var lastTime string
+		if hist, ok := allHistory[user.ID]; ok {
+			lastTime = hist.lastTime
+		}*/
+		msgs, err := c.LoadHistory(&realtime.HistoryOptions{RoomID: user.User.ID})
+		if err != nil {
+			log.Printf("ERROR: get messages from IMs err: %s\n", err)
+		} else {
+			if len(msgs) != 0 {
+				chat, ok := allHistory[user.User.ID]
+				if ok {
+					chat.lastTime = msgs[0].Timestamp.String()
+					chat.msgs = append(chat.msgs, msgs...)
+				} else {
+					chat = chatHistory{lastTime: msgs[0].Timestamp.String(), msgs: msgs}
+				}
+				allHistory[user.User.ID] = chat
+				result = append(result, msgs...)
+			}
+		}
+	}
+
+	return result
+}
+
+func subscribeToUpdates() {
 	msgChan := make(chan api.Message, 1024)
 
 	// Subscribe to message stream
@@ -274,34 +430,13 @@ func subscribeToUpdates(c *rest.Client, freq time.Duration) chan api.Message {
 
 		for {
 			msg = <-msgChan
-			//log.Printf("CurrentChatID: %s\n", currentChatID)
-			//log.Printf("Incoming message: %+v\n", msg)
 
-			chat, ok := allHistory[msg.ChannelID]
-			if ok {
-				chat.lastTime = msg.Timestamp.String()
-				chat.msgs = append(chat.msgs, msg)
-			} else {
-				msgs := make([]api.Message, 1)
-				msgs = append(msgs, msg)
-				chat = chatHistory{lastTime: msg.Timestamp.String(), msgs: msgs}
-			}
-			allHistory[msg.ChannelID] = chat
-
-			if msg.ChannelID == currentChatID || msg.ChannelID == currentChatID+currentChatID {
-				text := strings.Replace(msg.Text, "&nbsp;", "", -1)
-				text = strings.Replace(text, "<", "", -1)
-				text = strings.Replace(text, ">", "", -1)
-				//log.Printf("Text: %s\n", text)
-				text = fmt.Sprintf("<b>%s</b> <i>%s</i>\n%s", msg.User.Name, msg.Timestamp.Format("2006-01-02 15:04:05"), text)
-				addToList(chatStore, text)
-			}
+			log.Printf("CurrentChatID: %s\n", currentChatID)
+			log.Printf("Incoming message: %+v\n", msg)
 
 			bus.Pub(bus.Messages_new, msg)
 		}
 	}()
-
-	return msgChan
 }
 
 /**
@@ -309,6 +444,25 @@ Loads async from server: channels, groups, users.
 Stay active for changes. Use subscribers to get them
 */
 func loadContactListAsync() {
+	db, err := bolt.Open("data.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte("cache"))
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	/*
+		err = db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte("cache"))
+			channels = b.Get([]byte("channels"))
+			return nil
+		})
+	*/
 	go func() {
 		for {
 			bus.Pub(bus.Contacts_update_started)
