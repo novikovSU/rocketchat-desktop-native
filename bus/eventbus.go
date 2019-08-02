@@ -1,9 +1,10 @@
 package bus
 
 import (
+	"log"
+
 	"github.com/asaskevich/EventBus"
 	"github.com/novikovSU/rocketchat-desktop-native/config"
-	"log"
 )
 
 const (
@@ -72,19 +73,21 @@ const (
 )
 
 var (
-	Bus = EventBus.New()
+	b = EventBus.New()
 )
 
-func Publish(topic string, args ...interface{}) {
+// Pub AAA
+func Pub(topic string, args ...interface{}) {
 	if config.Debug {
 		log.Printf("Fire event: %s %s\n", topic, args)
 	}
-	Bus.Publish(topic, args...)
+	b.Publish(topic, args...)
 }
 
-func SubscribeAsync(topic string, fn interface{}) {
-	err := Bus.SubscribeAsync(topic, fn, false)
+// Sub AAA
+func Sub(topic string, fn interface{}) {
+	err := b.SubscribeAsync(topic, fn, false)
 	if err != nil {
-		log.Panicf("Invalid argument %s. It must be a function!", fn)
+		log.Panicf("Invalid argument %s. It must be a function!: %s\n", fn, err)
 	}
 }
