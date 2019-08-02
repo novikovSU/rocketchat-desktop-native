@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/novikovSU/rocketchat-desktop-native/bus"
-	"github.com/novikovSU/rocketchat-desktop-native/model"
 	"log"
 	"sort"
 	"strings"
+
+	"github.com/novikovSU/rocketchat-desktop-native/bus"
+	"github.com/novikovSU/rocketchat-desktop-native/model"
 
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/novikovSU/gorocket/api"
@@ -34,7 +35,7 @@ func (a DateSorter) Less(i, j int) bool { return a[i].Timestamp.Before(*a[j].Tim
 func initContactListSubscribers(cs *gtk.ListStore) {
 	//TODO react to remove users/groups/channels
 
-	bus.SubscribeAsync(bus.Contacts_update_finished, func() {
+	bus.Sub(bus.Contacts_update_finished, func() {
 		cs.Clear()
 		for _, channel := range model.Chat.Channels {
 			addToList(cs, hashSign+channel.Channel.Name)
