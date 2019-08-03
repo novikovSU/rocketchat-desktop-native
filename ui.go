@@ -18,26 +18,12 @@ const (
 	lockSign = "\U0001F512" // Lock sign for private groups
 )
 
-// ChannelsSorter sorts users by name.
-type ChannelsSorter []model.ChannelModel
+// ContactsSorter sorts by name.
+type ContactsSorter []model.IContactModel
 
-func (a ChannelsSorter) Len() int           { return len(a) }
-func (a ChannelsSorter) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ChannelsSorter) Less(i, j int) bool { return a[i].Channel.Name < a[j].Channel.Name }
-
-// GroupsSorter sorts users by name.
-type GroupsSorter []model.GroupModel
-
-func (a GroupsSorter) Len() int           { return len(a) }
-func (a GroupsSorter) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a GroupsSorter) Less(i, j int) bool { return a[i].Group.Name < a[j].Group.Name }
-
-// UsersSorter sorts users by name.
-type UsersSorter []model.UserModel
-
-func (a UsersSorter) Len() int           { return len(a) }
-func (a UsersSorter) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a UsersSorter) Less(i, j int) bool { return a[i].User.Name < a[j].User.Name }
+func (c ContactsSorter) Len() int           { return len(c) }
+func (c ContactsSorter) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
+func (c ContactsSorter) Less(i, j int) bool { return c[i].GetName() < c[j].GetName() }
 
 // DateSorter sorts messages by timestamp.
 type DateSorter []api.Message
@@ -55,19 +41,10 @@ func initUI() {
 	bus.Sub(bus.Contacts_update_finished, func() {
 		cs := contactsStore
 		cs.Clear()
-		for _, channel := range getSortedChannels() {
-			addToList(cs, hashSign+channel.Channel.Name)
-		}
 
-		for _, group := range getSortedGroups() {
-			addToList(cs, lockSign+group.Group.Name)
-		}
-
-		for _, user := range getSortedUsers() {
-			if user.User.Name != "" {
-				addToList(cs, user.User.Name)
-			}
-		}
+		addContactsToList(cs, getSortedChannels())
+		addContactsToList(cs, getSortedGroups())
+		addContactsToList(cs, getSortedUsers())
 	})
 
 	bus.Sub(bus.Messages_new, func(msg api.Message) {
@@ -118,32 +95,43 @@ func fillChat(cs *gtk.ListStore, name string) {
 	}
 }
 
-func getSortedChannels() []model.ChannelModel {
-	channels := make([]model.ChannelModel, 0, len(model.Chat.Channels))
-	for _, u := range model.Chat.Channels {
-		channels = append(channels, u)
-	}
-	sort.Sort(ChannelsSorter(channels))
-
-	return channels
+func getSortedChannels() []model.IContactModel {
+	return getSortedContacts(func(contacts []model.IContactModel) []model.IContactModel {
+		for _, u := range model.Chat.Channels {
+			contacts = append(contacts, u)
+		}
+		return contacts
+	})
 }
 
-func getSortedGroups() []model.GroupModel {
-	groups := make([]model.GroupModel, 0, len(model.Chat.Groups))
-	for _, u := range model.Chat.Groups {
-		groups = append(groups, u)
-	}
-	sort.Sort(GroupsSorter(groups))
-
-	return groups
+func getSortedGroups() []model.IContactModel {
+	return getSortedContacts(func(contacts []model.IContactModel) []model.IContactModel {
+		for _, u := range model.Chat.Groups {
+			contacts = append(contacts, u)
+		}
+		return contacts
+	})
 }
 
-func getSortedUsers() []model.UserModel {
-	users := make([]model.UserModel, 0, len(model.Chat.Users))
-	for _, u := range model.Chat.Users {
-		users = append(users, u)
-	}
-	sort.Sort(UsersSorter(users))
+func getSortedUsers() []model.IContactModel {
+	return getSortedContacts(func(contacts []model.IContactModel) []model.IContactModel {
+		for _, u := range model.Chat.Users {
+			contacts = append(contacts, u)
+		}
+		return contacts
+	})
+}
 
-	return users
+func getSortedContacts(appender func([]model.IContactModel) []model.IContactModel) []model.IContactModel {
+	contacts := appender(make([]model.IContactModel, 0))
+	sort.Sort(ContactsSorter(contacts))
+	return contacts
+}
+
+func addContactsToList(cs *gtk.ListStore, contacts []model.IContactModel) {
+	for _, contact := range contacts {
+		if contact.GetName() != "" {
+			addToList(cs, contact.GetDisplayName())
+		}
+	}
 }
