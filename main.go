@@ -26,7 +26,6 @@ var (
 	GtkApplication *gtk.Application
 	GtkBuilder     gtk.Builder
 	MainWindow     *gtk.Window
-	notif          *glib.Notification
 
 	contactsStore *gtk.ListStore
 	chatStore     *gtk.ListStore
@@ -143,6 +142,12 @@ func main() {
 
 	// Connect function to application activate event
 	app.Connect("activate", func() {
+		log.Println("application activate")
+
+		notif := glib.NotificationNew("Rocket.Chat Desktop native")
+		notif.SetBody("application activated")
+		GtkApplication.SendNotification(appID, notif)
+
 		GtkBuilder = *createGtkBuilder()
 		// Get application config
 		config, err = getConfig()
@@ -174,10 +179,6 @@ func main() {
 }
 
 func openMainWindow(app *gtk.Application) {
-	log.Println("application activate")
-
-	notif = glib.NotificationNew("Rocket.Chat Desktop native")
-
 	win := CreateWindow("main_window")
 	MainWindow = win
 

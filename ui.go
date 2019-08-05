@@ -9,6 +9,7 @@ import (
 	"github.com/novikovSU/rocketchat-desktop-native/bus"
 	"github.com/novikovSU/rocketchat-desktop-native/model"
 
+	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/novikovSU/gorocket/api"
 )
@@ -60,9 +61,10 @@ func initUI() {
 	})
 
 	bus.Sub(bus.Messages_new, func(msg api.Message) {
-		log.Printf("DEBUG: Prepare to notificate")
-		notif.SetBody("application activate")
-		//GtkApplication.SendNotification(appID, notif)
+	        log.Printf("DEBUG: Prepare to notificate")
+	        notif := glib.NotificationNew(fmt.Sprintf("%s (%s)", msg.User.Name, msg.User.UserName))
+	        notif.SetBody(msg.Text)
+	        GtkApplication.SendNotification(appID, notif)
 	})
 
 }
