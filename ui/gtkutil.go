@@ -1,9 +1,10 @@
-package main
+package ui
 
 import (
+	"log"
+
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
-	"log"
 )
 
 func GetGtkButton(name string) *gtk.Button {

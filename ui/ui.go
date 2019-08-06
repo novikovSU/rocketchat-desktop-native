@@ -1,0 +1,69 @@
+package ui
+
+import (
+	"log"
+
+	"github.com/gotk3/gotk3/glib"
+	"github.com/gotk3/gotk3/gtk"
+	"github.com/gotk3/gotk3/pango"
+)
+
+var (
+	GtkBuilder gtk.Builder
+)
+
+func InitUI() {
+	GtkBuilder = *createGtkBuilder()
+}
+
+func createGtkBuilder() *gtk.Builder {
+	// Get the GtkBuilder UI definition in the glade file.
+	builder, err := gtk.BuilderNewFromFile("main.glade")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	// Map the handlers to callback functions, and connect the signals to the Builder.
+	signals := map[string]interface{}{
+		//TODO do we need event for this?
+		"on_main_window_destroy": onMainWindowDestroy,
+	}
+	builder.ConnectSignals(signals)
+
+	return builder
+}
+
+func createTextViewTextColumn(title string, colNum int) *gtk.TreeViewColumn {
+	cellRenderer, err := gtk.CellRendererTextNew()
+	if err != nil {
+		log.Fatal(err)
+	}
+	cellRenderer.SetProperty("wrap-mode", pango.WRAP_WORD_CHAR)
+	cellRenderer.SetProperty("wrap-width", 530)
+	cellRenderer.SetProperty("ypad", 5)
+	cellRenderer.SetProperty("xpad", 3)
+
+	column, err := gtk.TreeViewColumnNewWithAttribute(title, cellRenderer, "markup", colNum)
+	if err != nil {
+		log.Fatal(err)
+	}
+	column.SetSizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
+
+	return column
+}
+
+func createListStore(types ...glib.Type) *gtk.ListStore {
+	store, err := gtk.ListStoreNew(types...)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return store
+}
+
+// onMainWindowDestory is the callback that is linked to the
+// on_main_window_destroy handler. It is not required to map this,
+// and is here to simply demo how to hook-up custom callbacks.
+func onMainWindowDestroy() {
+	log.Println("onMainWindowDestroy")
+}

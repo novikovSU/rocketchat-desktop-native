@@ -5,12 +5,14 @@ import (
 
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+
+	"github.com/novikovSU/rocketchat-desktop-native/ui"
 )
 
 func OpenConnectionWindow() {
 	wnd := createModal("connection_window")
 
-	okBtn := GetGtkButton("connection_ok_button")
+	okBtn := ui.GetGtkButton("connection_ok_button")
 	_, _ = okBtn.Connect("clicked", func() {
 		log.Println("connection_ok_button clicked")
 		newConf := createConfig()
@@ -33,7 +35,7 @@ func OpenConnectionWindow() {
 }
 
 func createModal(id string) *gtk.Dialog {
-	obj, err := GtkBuilder.GetObject(id)
+	obj, err := ui.GtkBuilder.GetObject(id)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -62,7 +64,7 @@ func createConfig() *Config {
 }
 
 func getInputTextValue(name string) string {
-	ctrl := GetGtkInputText(name)
+	ctrl := ui.GetGtkInputText(name)
 	val, _ := ctrl.GetText()
 
 	return val

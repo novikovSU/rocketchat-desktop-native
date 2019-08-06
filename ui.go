@@ -1,17 +1,20 @@
 package main
 
+//TODO move all of them to ui package
+
 import (
 	"fmt"
 	"log"
 	"sort"
 	"strings"
 
-	"github.com/novikovSU/rocketchat-desktop-native/bus"
-	"github.com/novikovSU/rocketchat-desktop-native/model"
-
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/novikovSU/gorocket/api"
+
+	"github.com/novikovSU/rocketchat-desktop-native/bus"
+	"github.com/novikovSU/rocketchat-desktop-native/model"
+	"github.com/novikovSU/rocketchat-desktop-native/ui"
 )
 
 const (
@@ -19,27 +22,9 @@ const (
 	lockSign = "\U0001F512" // Lock sign for private groups
 )
 
-// ContactsSorter sorts by name.
-type ContactsSorter []model.IContactModel
-
-func (c ContactsSorter) Len() int           { return len(c) }
-func (c ContactsSorter) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
-func (c ContactsSorter) Less(i, j int) bool { return c[i].GetName() < c[j].GetName() }
-
-// DateSorter sorts messages by timestamp.
-type DateSorter []api.Message
-
-func (a DateSorter) Len() int           { return len(a) }
-func (a DateSorter) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a DateSorter) Less(i, j int) bool { return a[i].Timestamp.Before(*a[j].Timestamp) }
-
-func initContactListSubscribers(cs *gtk.ListStore) {
-	//TODO react to remove users/groups/channels
-
-}
-
 func initUI() {
 	bus.Sub(bus.Contacts_update_finished, func() {
+		//TODO react to remove users/groups/channels: if it happens, what should we do with selection, for example?
 		cs := contactsStore
 		cs.Clear()
 
@@ -61,10 +46,10 @@ func initUI() {
 	})
 
 	bus.Sub(bus.Messages_new, func(msg api.Message) {
-	        log.Printf("DEBUG: Prepare to notificate")
-	        notif := glib.NotificationNew(fmt.Sprintf("%s (%s)", msg.User.Name, msg.User.UserName))
-	        notif.SetBody(msg.Text)
-	        GtkApplication.SendNotification(appID, notif)
+		log.Printf("DEBUG: Prepare to notificate")
+		notif := glib.NotificationNew(fmt.Sprintf("%s (%s)", msg.User.Name, msg.User.UserName))
+		notif.SetBody(msg.Text)
+		GtkApplication.SendNotification(appID, notif)
 	})
 
 }
@@ -89,7 +74,7 @@ func fillChat(cs *gtk.ListStore, name string) {
 		return
 	}
 
-	sort.Sort(DateSorter(msgs))
+	sort.Sort(ui.MessageSorter(msgs))
 
 	cs.Clear()
 	for _, msg := range msgs {
@@ -126,14 +111,15 @@ func getSortedUsers() []model.IContactModel {
 
 func getSortedContacts(appender func([]model.IContactModel) []model.IContactModel) []model.IContactModel {
 	contacts := appender(make([]model.IContactModel, 0))
-	sort.Sort(ContactsSorter(contacts))
+	sort.Sort(ui.ContactsSorter(contacts))
 	return contacts
 }
 
 func addContactsToList(cs *gtk.ListStore, contacts []model.IContactModel) {
 	for _, contact := range contacts {
 		if contact.GetName() != "" {
-			addToList(cs, contact.GetDisplayName())
+			iter := cs.Append()
+			cs.Set(iter, []int{ui.ContactListNameColumn, ui.ContactListUnreadCountColumn}, []interface{}{contact.GetDisplayName(), "(0)"})
 		}
 	}
 }

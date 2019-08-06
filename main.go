@@ -12,6 +12,8 @@ import (
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/pango"
+
+	"github.com/novikovSU/rocketchat-desktop-native/ui"
 )
 
 const appID = "com.github.novikovSU.rocketchat-desktop-native"
@@ -24,7 +26,6 @@ const (
 
 var (
 	GtkApplication *gtk.Application
-	GtkBuilder     gtk.Builder
 	MainWindow     *gtk.Window
 
 	contactsStore *gtk.ListStore
@@ -33,6 +34,7 @@ var (
 	ctrlPressed = false
 )
 
+//deprecated
 func initList(list *gtk.TreeView) *gtk.ListStore {
 	cellRenderer, err := gtk.CellRendererTextNew()
 	if err != nil {
@@ -116,13 +118,6 @@ func isWindow(obj glib.IObject) (*gtk.Window, error) {
 	return nil, errors.New("not a *gtk.Window")
 }
 
-// onMainWindowDestory is the callback that is linked to the
-// on_main_window_destroy handler. It is not required to map this,
-// and is here to simply demo how to hook-up custom callbacks.
-func onMainWindowDestroy() {
-	log.Println("onMainWindowDestroy")
-}
-
 func main() {
 
 	// Get application config
@@ -148,7 +143,7 @@ func main() {
 		notif.SetBody("application activated")
 		GtkApplication.SendNotification(appID, notif)
 
-		GtkBuilder = *createGtkBuilder()
+		ui.InitUI()
 		// Get application config
 		config, err = getConfig()
 		if err == nil {
@@ -185,7 +180,7 @@ func openMainWindow(app *gtk.Application) {
 	/* DISABLE custom header and menu */
 	// Create menu
 	// Get a headerbar
-	obj, err := GtkBuilder.GetObject("main_header")
+	obj, err := ui.GtkBuilder.GetObject("main_header")
 	if err != nil {
 		log.Panic(err)
 	}
@@ -196,7 +191,7 @@ func openMainWindow(app *gtk.Application) {
 	header.SetShowCloseButton(true)
 
 	// Create a new menu button
-	obj, err = GtkBuilder.GetObject("main_menu_button")
+	obj, err = ui.GtkBuilder.GetObject("main_menu_button")
 	if err != nil {
 		log.Panic(err)
 	}
@@ -256,10 +251,10 @@ func openMainWindow(app *gtk.Application) {
 
 	// END creating menu
 
-	contactList := GetTreeView("contact_list")
-	chatCaption := GetLabel("chat_caption")
-	chatList := GetTreeView("chat_list")
-	rightScrolledWindow := GetScrolledWindow("right_scrolled_window")
+	contactList, cs := ui.CreateContactListTreeView()
+	chatCaption := ui.GetLabel("chat_caption")
+	chatList := ui.GetTreeView("chat_list")
+	rightScrolledWindow := ui.GetScrolledWindow("right_scrolled_window")
 
 	// Autoscroll of chatList
 	chatList.Connect("size-allocate", func() {
@@ -270,10 +265,10 @@ func openMainWindow(app *gtk.Application) {
 
 	})
 
-	textInput := GetTextView("text_input")
+	textInput := ui.GetTextView("text_input")
 	// ------------------
 
-	contactsStore = initList(contactList)
+	contactsStore = cs
 
 	chatStore = initList(chatList)
 
@@ -336,7 +331,7 @@ func openMainWindow(app *gtk.Application) {
 
 // CreateWindow AAA
 func CreateWindow(id string) *gtk.Window {
-	obj, err := GtkBuilder.GetObject(id)
+	obj, err := ui.GtkBuilder.GetObject(id)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -354,20 +349,4 @@ func CreateWindow(id string) *gtk.Window {
 	GtkApplication.AddAction(wndCloseAction)
 
 	return wnd
-}
-
-func createGtkBuilder() *gtk.Builder {
-	// Get the GtkBuilder UI definition in the glade file.
-	builder, err := gtk.BuilderNewFromFile("main.glade")
-	if err != nil {
-		log.Panic(err)
-	}
-
-	// Map the handlers to callback functions, and connect the signals to the Builder.
-	signals := map[string]interface{}{
-		"on_main_window_destroy": onMainWindowDestroy,
-	}
-	builder.ConnectSignals(signals)
-
-	return builder
 }

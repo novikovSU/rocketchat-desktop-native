@@ -8,12 +8,12 @@ import (
 
 	bolt "go.etcd.io/bbolt"
 
-	"github.com/novikovSU/rocketchat-desktop-native/bus"
-	"github.com/novikovSU/rocketchat-desktop-native/model"
-
 	"github.com/novikovSU/gorocket/api"
 	"github.com/novikovSU/gorocket/realtime"
 	"github.com/novikovSU/gorocket/rest"
+
+	"github.com/novikovSU/rocketchat-desktop-native/bus"
+	"github.com/novikovSU/rocketchat-desktop-native/model"
 )
 
 const (
