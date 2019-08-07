@@ -9,4 +9,5 @@ type IContactModel interface {
 	GetId() string
 	GetName() string
 	GetDisplayName() string
+	GetUnreadCount() string
 }

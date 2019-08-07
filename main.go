@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/getlantern/systray"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
@@ -164,7 +163,7 @@ func main() {
 
 		subscribeToUpdates()
 
-		systray.Run(onSysTrayReady, onSysTrayExit)
+		//		systray.Run(onSysTrayReady, onSysTrayExit)
 	})
 
 	// Connect function to application shutdown event, this is not required.
@@ -326,7 +325,7 @@ func openMainWindow(app *gtk.Application) {
 				match, _ := regexp.MatchString("^(\\s*)$", inputText)
 				if !match {
 					selectionText := getSelectionText(contactsSelection)
-					postByNameREST(selectionText, inputText)
+					postByNameRT(selectionText, inputText)
 					buffer.SetText("")
 				}
 			}

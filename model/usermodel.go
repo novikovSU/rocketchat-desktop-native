@@ -1,6 +1,10 @@
 package model
 
-import "github.com/novikovSU/gorocket/api"
+import (
+	"strconv"
+
+	"github.com/novikovSU/gorocket/api"
+)
 
 type UserModel struct {
 	UnreadCount int
@@ -18,4 +22,11 @@ func (u UserModel) GetName() string {
 
 func (u UserModel) GetDisplayName() string {
 	return u.GetName()
+}
+
+func (u UserModel) GetUnreadCount() string {
+	if u.UnreadCount > 0 {
+		return strconv.Itoa(u.UnreadCount)
+	}
+	return ""
 }

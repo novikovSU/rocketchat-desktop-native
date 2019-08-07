@@ -1,6 +1,10 @@
 package model
 
-import "github.com/novikovSU/gorocket/api"
+import (
+	"strconv"
+
+	"github.com/novikovSU/gorocket/api"
+)
 
 type ChannelModel struct {
 	UnreadCount int
@@ -18,4 +22,11 @@ func (ch ChannelModel) GetName() string {
 
 func (ch ChannelModel) GetDisplayName() string {
 	return hashSign + ch.GetName()
+}
+
+func (ch ChannelModel) GetUnreadCount() string {
+	if ch.UnreadCount > 0 {
+		return strconv.Itoa(ch.UnreadCount)
+	}
+	return ""
 }

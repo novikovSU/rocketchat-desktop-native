@@ -128,7 +128,7 @@ func addContactsToList(cs *gtk.ListStore, contacts []model.IContactModel) {
 	for _, contact := range contacts {
 		if contact.GetName() != "" {
 			iter := cs.Append()
-			cs.Set(iter, []int{ui.ContactListNameColumn, ui.ContactListUnreadCountColumn}, []interface{}{contact.GetDisplayName(), "(0)"})
+			cs.Set(iter, []int{ui.ContactListNameColumn, ui.ContactListUnreadCountColumn}, []interface{}{contact.GetDisplayName(), contact.GetUnreadCount()})
 		}
 	}
 }

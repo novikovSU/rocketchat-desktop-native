@@ -1,6 +1,10 @@
 package model
 
-import "github.com/novikovSU/gorocket/api"
+import (
+	"strconv"
+
+	"github.com/novikovSU/gorocket/api"
+)
 
 type GroupModel struct {
 	UnreadCount int
@@ -18,4 +22,11 @@ func (g GroupModel) GetName() string {
 
 func (g GroupModel) GetDisplayName() string {
 	return lockSign + g.GetName()
+}
+
+func (g GroupModel) GetUnreadCount() string {
+	if g.UnreadCount > 0 {
+		return strconv.Itoa(g.UnreadCount)
+	}
+	return ""
 }
