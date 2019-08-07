@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/novikovSU/gorocket/api"
+	"strings"
 )
 
 var (
@@ -9,9 +10,10 @@ var (
 )
 
 type ChatModel struct {
-	Users    map[string]UserModel
-	Channels map[string]ChannelModel
-	Groups   map[string]GroupModel
+	ActiveContactId string
+	Users           map[string]*UserModel
+	Channels        map[string]*ChannelModel
+	Groups          map[string]*GroupModel
 }
 
 func (chat *ChatModel) AddUser(usr api.User) bool {
@@ -19,7 +21,7 @@ func (chat *ChatModel) AddUser(usr api.User) bool {
 		return false
 	}
 
-	chat.Users[usr.ID] = UserModel{User: usr}
+	chat.Users[usr.ID] = &UserModel{User: usr}
 	return true
 }
 
@@ -37,7 +39,7 @@ func (chat *ChatModel) AddChannel(ch api.Channel) bool {
 		return false
 	}
 
-	chat.Channels[ch.ID] = ChannelModel{Channel: ch}
+	chat.Channels[ch.ID] = &ChannelModel{Channel: ch}
 	return true
 }
 
@@ -55,7 +57,7 @@ func (chat *ChatModel) AddGroup(gr api.Group) bool {
 		return false
 	}
 
-	chat.Groups[gr.ID] = GroupModel{Group: gr}
+	chat.Groups[gr.ID] = &GroupModel{Group: gr}
 	return true
 }
 
@@ -66,6 +68,22 @@ func (chat *ChatModel) RemoveGroup(gr api.Group) bool {
 	}
 
 	return false
+}
+
+func (chat *ChatModel) GetModelById(id string) IContactModel {
+	if model, exists := chat.Users[id]; exists {
+		return model
+	}
+
+	if model, exists := chat.Groups[id]; exists {
+		return model
+	}
+
+	if model, exists := chat.Channels[id]; exists {
+		return model
+	}
+
+	return nil
 }
 
 //TODO do we need to store total count as variable?
@@ -87,20 +105,22 @@ func (chat *ChatModel) GetTotalUnreadCount() int {
 }
 
 func (chat *ChatModel) GetUnreadCount(id string) int {
-	count := chat.getUnreadCountForContact(chat.Users[id])
-	count += chat.getUnreadCountForContact(chat.Channels[id])
-	count += chat.getUnreadCountForContact(chat.Groups[id])
-
-	return count
-}
-
-func (chat *ChatModel) getUnreadCountForContact(contact IContactModel) int {
-	if contact == nil {
+	model := chat.GetModelById(id)
+	if model == nil {
 		return 0
 	}
-	return contact.GetUnreadCount()
+	return model.GetUnreadCount()
+}
+
+func (chat *ChatModel) AddMessage(msg api.Message, me *api.User) {
+	model := chat.GetModelById(strings.Replace(msg.ChannelID, me.ID, "", 1))
+	if model != nil {
+		//TODO handle activeContactId
+		// add to model variable: type. It should means strategy of unread count: differs when chat window visible or hide
+		model.UpdateUnreadCount(1)
+	}
 }
 
 func init() {
-	Chat = ChatModel{Users: make(map[string]UserModel), Channels: make(map[string]ChannelModel), Groups: make(map[string]GroupModel)}
+	Chat = ChatModel{Users: make(map[string]*UserModel), Channels: make(map[string]*ChannelModel), Groups: make(map[string]*GroupModel)}
 }

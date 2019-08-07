@@ -10,24 +10,28 @@ type UserModel struct {
 	History     []api.Message
 }
 
-func (u UserModel) GetId() string {
+func (u *UserModel) GetId() string {
 	return u.User.ID
 }
 
-func (u UserModel) GetName() string {
+func (u *UserModel) GetName() string {
 	return u.User.Name
 }
 
-func (u UserModel) GetDisplayName() string {
+func (u *UserModel) GetDisplayName() string {
 	return u.GetName()
 }
 
-func (u UserModel) GetUnreadCount() int {
+func (u *UserModel) GetUnreadCount() int {
 	return u.UnreadCount
 }
 
-func UsersToModels(users []UserModel) []IContactModel {
-	models := make([]IContactModel, len(users))
+func (u *UserModel) UpdateUnreadCount(change int) {
+	u.UnreadCount += change
+}
+
+func UsersToModels(users []*UserModel) []IContactModel {
+	models := make([]IContactModel, 0, len(users))
 	for _, u := range users {
 		models = append(models, u)
 	}
@@ -35,8 +39,8 @@ func UsersToModels(users []UserModel) []IContactModel {
 	return models
 }
 
-func UsersMapToModels(users map[string]UserModel) []IContactModel {
-	models := make([]IContactModel, len(users))
+func UsersMapToModels(users map[string]*UserModel) []IContactModel {
+	models := make([]IContactModel, 0, len(users))
 	for _, u := range users {
 		models = append(models, u)
 	}

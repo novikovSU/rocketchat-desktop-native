@@ -25,10 +25,9 @@ var (
 	clientRT *realtime.Client
 	msgChan  []api.Message
 
-	me            *api.User
-	allHistory    map[string]chatHistory
-	pullChan      chan api.Message
-	currentChatID string
+	me         *api.User
+	allHistory map[string]chatHistory
+	pullChan   chan api.Message
 )
 
 type chatHistory struct {
@@ -41,6 +40,7 @@ func initRocket() {
 	clientRT = initRTConnection()
 	me = getSelfInfo()
 	loadContactListAsync()
+	subscribeToMessages()
 }
 
 func initRESTConnection() *rest.Client {
@@ -227,8 +227,9 @@ func getHistoryByName(name string) ([]api.Message, error) {
 	return msgs, nil
 }
 
+//deprecated TODO: delete?
 func postByNameREST(name string, text string) {
-	_, err := client.Chat().Post(&rest.ChatPostOptions{Channel: currentChatID, Text: text})
+	_, err := client.Chat().Post(&rest.ChatPostOptions{Channel: model.Chat.ActiveContactId, Text: text})
 	if err != nil {
 		if config.Debug {
 			log.Printf("send message err: %s\n", err)
@@ -242,7 +243,7 @@ func postByNameRT(name string, text string) {
 		log.Printf("can't get room by name %s: %s\n", name, err)
 		return
 	}
-	room := api.Channel{ID: currentChatID}
+	room := api.Channel{ID: model.Chat.ActiveContactId}
 	_, err = clientRT.SendMessage(&room, text)
 	if err != nil {
 		log.Printf("send message (to: %s[%s], text: %s) err: %s\n", name, roomID, text, err)
@@ -418,27 +419,6 @@ func getNewMessagesRT(c *realtime.Client) []api.Message {
 	return result
 }
 
-func subscribeToUpdates() {
-	msgChan := make(chan api.Message, 1024)
-
-	// Subscribe to message stream
-	allMessages := api.Channel{ID: "__my_messages__"}
-	msgChan, _ = clientRT.SubscribeToMessageStream(&allMessages)
-
-	go func() {
-		var msg api.Message
-
-		for {
-			msg = <-msgChan
-
-			log.Printf("CurrentChatID: %s\n", currentChatID)
-			log.Printf("Incoming message: %+v\n", msg)
-
-			bus.Pub(bus.Messages_new, msg)
-		}
-	}()
-}
-
 /**
 Loads async from server: channels, groups, users.
 Stay active for changes. Use subscribers to get them
@@ -476,6 +456,28 @@ func loadContactListAsync() {
 	}()
 }
 
+func subscribeToMessages() {
+	msgChan := make(chan api.Message, 1024)
+
+	// Subscribe to message stream
+	allMessages := api.Channel{ID: "__my_messages__"}
+	msgChan, _ = clientRT.SubscribeToMessageStream(&allMessages)
+
+	go func() {
+		var msg api.Message
+
+		for {
+			msg = <-msgChan
+
+			log.Printf("CurrentChatID: %s\n", model.Chat.ActiveContactId)
+			log.Printf("Incoming message: %+v\n", msg)
+
+			model.Chat.AddMessage(msg, me)
+			bus.Pub(bus.Messages_new, msg)
+		}
+	}()
+}
+
 func loadUsers() {
 	restUsers, err := client.Users().List()
 	if err != nil {
@@ -483,7 +485,7 @@ func loadUsers() {
 	}
 
 	for _, existsUser := range model.Chat.Users {
-		if !containsUser(&restUsers, &existsUser) {
+		if !containsUser(&restUsers, existsUser) {
 			model.Chat.RemoveUser(existsUser.User)
 			bus.Pub(bus.Contacts_users_removed, existsUser.User)
 		}
@@ -503,7 +505,7 @@ func loadChannels() {
 	}
 
 	for _, existsChannel := range model.Chat.Channels {
-		if !containsChannel(&restChannels, &existsChannel) {
+		if !containsChannel(&restChannels, existsChannel) {
 			model.Chat.RemoveChannel(existsChannel.Channel)
 			bus.Pub(bus.Contacts_channels_removed, existsChannel.Channel)
 		}
@@ -523,7 +525,7 @@ func loadGroups() {
 	}
 
 	for _, existsGroup := range model.Chat.Groups {
-		if !containsGroup(&restGroups, &existsGroup) {
+		if !containsGroup(&restGroups, existsGroup) {
 			model.Chat.RemoveGroup(existsGroup.Group)
 			bus.Pub(bus.Contacts_groups_removed, existsGroup.Group)
 		}

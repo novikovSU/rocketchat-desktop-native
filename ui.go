@@ -36,13 +36,37 @@ func initUI() {
 
 	bus.Sub(bus.Messages_new, func(msg api.Message) {
 		cs := chatStore
-		if msg.ChannelID == currentChatID || msg.ChannelID == me.ID+currentChatID {
+		if msg.ChannelID == model.Chat.ActiveContactId || msg.ChannelID == me.ID+model.Chat.ActiveContactId {
 			text := strings.Replace(msg.Text, "&nbsp;", "", -1)
 			text = strings.Replace(text, "<", "", -1)
 			text = strings.Replace(text, ">", "", -1)
 			//log.Printf("Text: %s\n", text)
 			text = fmt.Sprintf("<b>%s</b> <i>%s</i>\n%s", msg.User.Name, msg.Timestamp.Format("2006-01-02 15:04:05"), text)
 			addToList(cs, text)
+		}
+
+		//TODO create function for get contactId by message
+		model := model.Chat.GetModelById(strings.Replace(msg.ChannelID, me.ID, "", 1))
+		if model != nil {
+			iter, exists := contactsStore.GetIterFirst()
+			if exists {
+				for {
+					val, err := contactsStore.GetValue(iter, ui.ContactListNameColumn)
+					if err == nil {
+						strVal, err := val.GetString()
+						if err == nil {
+							if strings.Compare(strVal, model.GetDisplayName()) == 0 {
+								contactsStore.SetValue(iter, ui.ContactListUnreadCountColumn, getUnreadCount(&model))
+								break
+							} else {
+								if !contactsStore.IterNext(iter) {
+									break
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 	})
 
@@ -53,7 +77,7 @@ func initUI() {
 		if ownMessage(msg) {
 			return
 		}
-		if mainWindowIsFocused && msg.ChannelID == currentChatID {
+		if mainWindowIsFocused && msg.ChannelID == model.Chat.ActiveContactId {
 			return
 		}
 		notif := glib.NotificationNew(fmt.Sprintf("%s (%s)", msg.User.Name, msg.User.UserName))
@@ -74,9 +98,9 @@ func drawMessage(cs *gtk.ListStore, msg api.Message) error {
 }
 
 func fillChat(cs *gtk.ListStore, name string) {
-	currentChatID, _ = getRIDByName(name)
+	model.Chat.ActiveContactId, _ = getRIDByName(name)
 
-	msgs, err := getHistoryByID(currentChatID)
+	msgs, err := getHistoryByID(model.Chat.ActiveContactId)
 	if err != nil {
 		log.Printf("ERROR: can't get history by name %s: %s\n", name, err)
 		return

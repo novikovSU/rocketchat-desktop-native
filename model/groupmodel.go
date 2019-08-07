@@ -10,24 +10,28 @@ type GroupModel struct {
 	History     []api.Message
 }
 
-func (g GroupModel) GetId() string {
+func (g *GroupModel) GetId() string {
 	return g.Group.ID
 }
 
-func (g GroupModel) GetName() string {
+func (g *GroupModel) GetName() string {
 	return g.Group.Name
 }
 
-func (g GroupModel) GetDisplayName() string {
+func (g *GroupModel) GetDisplayName() string {
 	return lockSign + g.GetName()
 }
 
-func (g GroupModel) GetUnreadCount() int {
+func (g *GroupModel) GetUnreadCount() int {
 	return g.UnreadCount
 }
 
-func GroupsToModels(groups []GroupModel) []IContactModel {
-	models := make([]IContactModel, len(groups))
+func (g *GroupModel) UpdateUnreadCount(change int) {
+	g.UnreadCount += change
+}
+
+func GroupsToModels(groups []*GroupModel) []IContactModel {
+	models := make([]IContactModel, 0, len(groups))
 	for _, g := range groups {
 		models = append(models, g)
 	}
@@ -35,8 +39,8 @@ func GroupsToModels(groups []GroupModel) []IContactModel {
 	return models
 }
 
-func GroupsMapToModels(groups map[string]GroupModel) []IContactModel {
-	models := make([]IContactModel, len(groups))
+func GroupsMapToModels(groups map[string]*GroupModel) []IContactModel {
+	models := make([]IContactModel, 0, len(groups))
 	for _, g := range groups {
 		models = append(models, g)
 	}

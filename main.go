@@ -161,8 +161,6 @@ func main() {
 		// Get Rocket.Chat connection
 		initRocket()
 
-		subscribeToUpdates()
-
 		//		systray.Run(onSysTrayReady, onSysTrayExit)
 	})
 
