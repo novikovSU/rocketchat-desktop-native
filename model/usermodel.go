@@ -30,3 +30,21 @@ func (u UserModel) GetUnreadCount() string {
 	}
 	return ""
 }
+
+func UsersToModels(users []UserModel) []IContactModel {
+	models := make([]IContactModel, len(users))
+	for _, u := range users {
+		models = append(models, u)
+	}
+
+	return models
+}
+
+func UsersMapToModels(users map[string]UserModel) []IContactModel {
+	models := make([]IContactModel, len(users))
+	for _, u := range users {
+		models = append(models, u)
+	}
+
+	return models
+}

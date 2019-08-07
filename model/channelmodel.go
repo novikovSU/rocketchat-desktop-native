@@ -30,3 +30,21 @@ func (ch ChannelModel) GetUnreadCount() string {
 	}
 	return ""
 }
+
+func ChannelsToModels(channels []ChannelModel) []IContactModel {
+	models := make([]IContactModel, len(channels))
+	for _, ch := range channels {
+		models = append(models, ch)
+	}
+
+	return models
+}
+
+func ChannelsMapToModels(channels map[string]ChannelModel) []IContactModel {
+	models := make([]IContactModel, len(channels))
+	for _, ch := range channels {
+		models = append(models, ch)
+	}
+
+	return models
+}

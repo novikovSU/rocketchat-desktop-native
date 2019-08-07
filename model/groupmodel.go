@@ -30,3 +30,21 @@ func (g GroupModel) GetUnreadCount() string {
 	}
 	return ""
 }
+
+func GroupsToModels(groups []GroupModel) []IContactModel {
+	models := make([]IContactModel, len(groups))
+	for _, g := range groups {
+		models = append(models, g)
+	}
+
+	return models
+}
+
+func GroupsMapToModels(groups map[string]GroupModel) []IContactModel {
+	models := make([]IContactModel, len(groups))
+	for _, g := range groups {
+		models = append(models, g)
+	}
+
+	return models
+}

@@ -92,35 +92,23 @@ func fillChat(cs *gtk.ListStore, name string) {
 }
 
 func getSortedChannels() []model.IContactModel {
-	return getSortedContacts(func(contacts []model.IContactModel) []model.IContactModel {
-		for _, u := range model.Chat.Channels {
-			contacts = append(contacts, u)
-		}
-		return contacts
-	})
+	contacts := model.ChannelsMapToModels(model.Chat.Channels)
+	sort.Sort(ui.ContactsSorter(contacts))
+
+	return contacts
 }
 
 func getSortedGroups() []model.IContactModel {
-	return getSortedContacts(func(contacts []model.IContactModel) []model.IContactModel {
-		for _, u := range model.Chat.Groups {
-			contacts = append(contacts, u)
-		}
-		return contacts
-	})
+	contacts := model.GroupsMapToModels(model.Chat.Groups)
+	sort.Sort(ui.ContactsSorter(contacts))
+
+	return contacts
 }
 
 func getSortedUsers() []model.IContactModel {
-	return getSortedContacts(func(contacts []model.IContactModel) []model.IContactModel {
-		for _, u := range model.Chat.Users {
-			contacts = append(contacts, u)
-		}
-		return contacts
-	})
-}
-
-func getSortedContacts(appender func([]model.IContactModel) []model.IContactModel) []model.IContactModel {
-	contacts := appender(make([]model.IContactModel, 0))
+	contacts := model.UsersMapToModels(model.Chat.Users)
 	sort.Sort(ui.ContactsSorter(contacts))
+
 	return contacts
 }
 
