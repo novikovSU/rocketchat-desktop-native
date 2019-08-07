@@ -46,10 +46,19 @@ func initUI() {
 	})
 
 	bus.Sub(bus.Messages_new, func(msg api.Message) {
-		log.Printf("DEBUG: Prepare to notificate")
+		if config.Debug {
+			log.Printf("DEBUG: Prepare to notificate")
+		}
+		if ownMessage(msg) {
+			return
+		}
+		if mainWindowIsFocused && msg.ChannelID == currentChatID {
+			return
+		}
 		notif := glib.NotificationNew(fmt.Sprintf("%s (%s)", msg.User.Name, msg.User.UserName))
 		notif.SetBody(msg.Text)
 		GtkApplication.SendNotification(appID, notif)
+
 	})
 
 }

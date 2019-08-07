@@ -249,7 +249,7 @@ func postByNameRT(name string, text string) {
 	}
 }
 
-func ownMessage(c *Config, msg api.Message) bool {
+func ownMessage(msg api.Message) bool {
 	return me.ID == msg.User.ID
 }
 

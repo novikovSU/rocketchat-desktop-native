@@ -31,7 +31,10 @@ var (
 	contactsStore *gtk.ListStore
 	chatStore     *gtk.ListStore
 
-	ctrlPressed = false
+	ctrlPressed  = false
+	shiftPressed = false
+
+	mainWindowIsFocused = false
 )
 
 //deprecated
@@ -176,6 +179,16 @@ func main() {
 func openMainWindow(app *gtk.Application) {
 	win := CreateWindow("main_window")
 	MainWindow = win
+
+	win.Connect("focus-in-event", func() {
+		log.Printf("DEBUG: Main window is focused\n")
+		mainWindowIsFocused = true
+	})
+
+	win.Connect("focus-out-event", func() {
+		log.Printf("DEBUG: Main window is UNfocused\n")
+		mainWindowIsFocused = false
+	})
 
 	/* DISABLE custom header and menu */
 	// Create menu
