@@ -1,8 +1,6 @@
 package model
 
 import (
-	"strconv"
-
 	"github.com/novikovSU/gorocket/api"
 )
 
@@ -24,11 +22,8 @@ func (ch ChannelModel) GetDisplayName() string {
 	return hashSign + ch.GetName()
 }
 
-func (ch ChannelModel) GetUnreadCount() string {
-	if ch.UnreadCount > 0 {
-		return strconv.Itoa(ch.UnreadCount)
-	}
-	return ""
+func (ch ChannelModel) GetUnreadCount() int {
+	return ch.UnreadCount
 }
 
 func ChannelsToModels(channels []ChannelModel) []IContactModel {

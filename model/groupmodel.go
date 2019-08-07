@@ -1,8 +1,6 @@
 package model
 
 import (
-	"strconv"
-
 	"github.com/novikovSU/gorocket/api"
 )
 
@@ -24,11 +22,8 @@ func (g GroupModel) GetDisplayName() string {
 	return lockSign + g.GetName()
 }
 
-func (g GroupModel) GetUnreadCount() string {
-	if g.UnreadCount > 0 {
-		return strconv.Itoa(g.UnreadCount)
-	}
-	return ""
+func (g GroupModel) GetUnreadCount() int {
+	return g.UnreadCount
 }
 
 func GroupsToModels(groups []GroupModel) []IContactModel {

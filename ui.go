@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/gotk3/gotk3/glib"
@@ -58,9 +59,7 @@ func initUI() {
 		notif := glib.NotificationNew(fmt.Sprintf("%s (%s)", msg.User.Name, msg.User.UserName))
 		notif.SetBody(msg.Text)
 		GtkApplication.SendNotification(appID, notif)
-
 	})
-
 }
 
 func drawMessage(cs *gtk.ListStore, msg api.Message) error {
@@ -116,7 +115,21 @@ func addContactsToList(cs *gtk.ListStore, contacts []model.IContactModel) {
 	for _, contact := range contacts {
 		if contact.GetName() != "" {
 			iter := cs.Append()
-			cs.Set(iter, []int{ui.ContactListNameColumn, ui.ContactListUnreadCountColumn}, []interface{}{contact.GetDisplayName(), contact.GetUnreadCount()})
+			cs.SetValue(iter, ui.ContactListNameColumn, contact.GetDisplayName())
+			cs.SetValue(iter, ui.ContactListUnreadCountColumn, getUnreadCount(&contact))
 		}
 	}
+}
+
+func getUnreadCount(contactModel *model.IContactModel) string {
+	count := (*contactModel).GetUnreadCount()
+	if count > 0 {
+		return strconv.Itoa(count)
+	}
+	return ""
+}
+
+func updateUnreadCount(msg api.Message) {
+	/*msg.ChannelID
+	model.Chat.*/
 }

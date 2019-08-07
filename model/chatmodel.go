@@ -68,6 +68,39 @@ func (chat *ChatModel) RemoveGroup(gr api.Group) bool {
 	return false
 }
 
+//TODO do we need to store total count as variable?
+func (chat *ChatModel) GetTotalUnreadCount() int {
+	count := 0
+	for _, user := range chat.Users {
+		count += user.UnreadCount
+	}
+
+	for _, user := range chat.Channels {
+		count += user.UnreadCount
+	}
+
+	for _, user := range chat.Groups {
+		count += user.UnreadCount
+	}
+
+	return count
+}
+
+func (chat *ChatModel) GetUnreadCount(id string) int {
+	count := chat.getUnreadCountForContact(chat.Users[id])
+	count += chat.getUnreadCountForContact(chat.Channels[id])
+	count += chat.getUnreadCountForContact(chat.Groups[id])
+
+	return count
+}
+
+func (chat *ChatModel) getUnreadCountForContact(contact IContactModel) int {
+	if contact == nil {
+		return 0
+	}
+	return contact.GetUnreadCount()
+}
+
 func init() {
 	Chat = ChatModel{Users: make(map[string]UserModel), Channels: make(map[string]ChannelModel), Groups: make(map[string]GroupModel)}
 }

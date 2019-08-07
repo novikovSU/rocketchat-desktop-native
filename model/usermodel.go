@@ -1,8 +1,6 @@
 package model
 
 import (
-	"strconv"
-
 	"github.com/novikovSU/gorocket/api"
 )
 
@@ -24,11 +22,8 @@ func (u UserModel) GetDisplayName() string {
 	return u.GetName()
 }
 
-func (u UserModel) GetUnreadCount() string {
-	if u.UnreadCount > 0 {
-		return strconv.Itoa(u.UnreadCount)
-	}
-	return ""
+func (u UserModel) GetUnreadCount() int {
+	return u.UnreadCount
 }
 
 func UsersToModels(users []UserModel) []IContactModel {
