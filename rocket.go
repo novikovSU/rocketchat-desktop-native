@@ -74,15 +74,6 @@ func getSelfInfo() *api.User {
 }
 
 //deprecated
-func getConnection() (err error) {
-	err = getConnectionSafe(config)
-	if err != nil {
-		log.Fatalf("login err: %s\n", err)
-	}
-	return
-}
-
-//deprecated
 func getConnectionSafe(config *Config) error {
 	client = rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
 	return client.Login(api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})

@@ -27,6 +27,18 @@ func GetLabel(name string) *gtk.Label {
 	return (*getGtkObjectSafe(name)).(*gtk.Label)
 }
 
+func GetHeaderBar(name string) *gtk.HeaderBar {
+	return (*getGtkObjectSafe(name)).(*gtk.HeaderBar)
+}
+
+func GetMenuButton(name string) *gtk.MenuButton {
+	return (*getGtkObjectSafe(name)).(*gtk.MenuButton)
+}
+
+func GetWindow(name string) *gtk.Window {
+	return (*getGtkObjectSafe(name)).(*gtk.Window)
+}
+
 func GetScrolledWindow(name string) *gtk.ScrolledWindow {
 	return (*getGtkObjectSafe(name)).(*gtk.ScrolledWindow)
 }

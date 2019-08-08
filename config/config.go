@@ -1,3 +1,6 @@
 package config
 
-const Debug = true
+const (
+	AppID = "com.github.novikovSU.rocketchat-desktop-native"
+	Debug = true
+)

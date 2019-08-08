@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"log"
 	"os"
 	"regexp"
@@ -12,14 +11,11 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/pango"
 
+	cfg "github.com/novikovSU/rocketchat-desktop-native/config"
 	"github.com/novikovSU/rocketchat-desktop-native/ui"
 )
 
-const appID = "com.github.novikovSU.rocketchat-desktop-native"
-
 const (
-	iistItem = iota
-	nColumns
 	keyEnter = 65293
 )
 
@@ -112,21 +108,9 @@ func getSelectionText(selection *gtk.TreeSelection) (selectionText string) {
 	return
 }
 
-func isWindow(obj glib.IObject) (*gtk.Window, error) {
-	// Make type assertion (as per gtk.go).
-	if win, ok := obj.(*gtk.Window); ok {
-		return win, nil
-	}
-	return nil, errors.New("not a *gtk.Window")
-}
-
 func main() {
-
-	// Get application config
-	config, _ = getConfig()
-
 	// Create a new application.
-	app, err := gtk.ApplicationNew(appID, glib.APPLICATION_FLAGS_NONE)
+	app, err := gtk.ApplicationNew(cfg.AppID, glib.APPLICATION_FLAGS_NONE)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -141,18 +125,15 @@ func main() {
 	app.Connect("activate", func() {
 		log.Println("application activate")
 
-		notif := glib.NotificationNew("Rocket.Chat Desktop native")
-		notif.SetBody("application activated")
-		GtkApplication.SendNotification(appID, notif)
+		ui.InitUI(app)
+		ui.SendNotification("Rocket.Chat Desktop native", "application activated")
 
-		ui.InitUI()
 		// Get application config
 		config, err = getConfig()
 		if err == nil {
-			// Get Rocket.Chat connection
-			getConnection()
 			openMainWindow(app)
 		} else {
+			//TODO handle situation properly: try to connect in goroutine and open window again if fails
 			OpenConnectionWindow()
 		}
 
@@ -174,92 +155,19 @@ func main() {
 }
 
 func openMainWindow(app *gtk.Application) {
-	win := CreateWindow("main_window")
-	MainWindow = win
+	MainWindow = ui.CreateWindow("main_window")
 
-	win.Connect("focus-in-event", func() {
+	MainWindow.Connect("focus-in-event", func() {
 		log.Printf("DEBUG: Main window is focused\n")
 		mainWindowIsFocused = true
 	})
 
-	win.Connect("focus-out-event", func() {
+	MainWindow.Connect("focus-out-event", func() {
 		log.Printf("DEBUG: Main window is UNfocused\n")
 		mainWindowIsFocused = false
 	})
 
-	/* DISABLE custom header and menu */
-	// Create menu
-	// Get a headerbar
-	obj, err := ui.GtkBuilder.GetObject("main_header")
-	if err != nil {
-		log.Panic(err)
-	}
-	header, ok := obj.(*gtk.HeaderBar)
-	if ok != true {
-		log.Fatal("Could not create header bar:", err)
-	}
-	header.SetShowCloseButton(true)
-
-	// Create a new menu button
-	obj, err = ui.GtkBuilder.GetObject("main_menu_button")
-	if err != nil {
-		log.Panic(err)
-	}
-	mbtn, ok := obj.(*gtk.MenuButton)
-	if ok != true {
-		log.Fatal("Could not create menu button:", err)
-	}
-
-	// Set up the menu model for the button
-	menu := glib.MenuNew()
-	if menu == nil {
-		log.Fatal("Could not create menu (nil)")
-	}
-	// Actions with the prefix 'app' reference actions on the application
-	// Actions with the prefix 'win' reference actions on the current window (specific to ApplicationWindow)
-	// Other prefixes can be added to widgets via InsertActionGroup
-	menu.Append("Connect", "custom.connect")
-	menu.Append("Disconnect", "custom.disconnect")
-	menu.Append("Quit", "app.quit")
-
-	customActionGroup := glib.SimpleActionGroupNew()
-	win.InsertActionGroup("custom", customActionGroup)
-
-	// Create an action in the custom action group
-	aConnect := glib.SimpleActionNew("connect", nil)
-	aConnect.Connect("activate", func() {
-		log.Println("CONNECTED")
-		OpenConnectionWindow()
-	})
-	customActionGroup.AddAction(aConnect)
-	app.AddAction(aConnect)
-
-	aDisconnect := glib.SimpleActionNew("disconnect", nil)
-	aDisconnect.Connect("activate", func() {
-		log.Println("DISCONNECTED")
-	})
-	customActionGroup.AddAction(aDisconnect)
-	app.AddAction(aDisconnect)
-
-	mbtn.SetMenuModel(&menu.MenuModel)
-
-	// add the menu button to the header
-	header.PackStart(mbtn)
-
-	// Assemble the window
-	win.SetTitlebar(header)
-
-	// Add Quit action to menu
-	aQuit := glib.SimpleActionNew("quit", nil)
-	aQuit.Connect("activate", func() {
-		app.Quit()
-	})
-	app.AddAction(aQuit)
-
-	// Add action for X-button
-	win.Connect("destroy", app.Quit)
-
-	// END creating menu
+	createMenuBar()
 
 	contactList, cs := ui.CreateContactListTreeView()
 	chatCaption := ui.GetLabel("chat_caption")
@@ -343,28 +251,69 @@ func openMainWindow(app *gtk.Application) {
 		}
 	})
 
-	win.ShowAll()
-	app.AddWindow(win)
+	MainWindow.ShowAll()
+	app.AddWindow(MainWindow)
 }
 
-// CreateWindow AAA
-func CreateWindow(id string) *gtk.Window {
-	obj, err := ui.GtkBuilder.GetObject(id)
-	if err != nil {
-		log.Panic(err)
+func createMenuBar() {
+	/* DISABLE custom header and menu */
+	// Get a headerbar
+
+	// Create a new menu button
+	mbtn := ui.GetMenuButton("main_menu_button")
+
+	// Set up the menu model for the button
+	menu := glib.MenuNew()
+	if menu == nil {
+		log.Fatal("Could not create menu (nil)")
 	}
 
-	wnd, err := isWindow(obj)
-	if err != nil {
-		log.Panic(err)
-	}
+	// Actions with the prefix 'app' reference actions on the application
+	// Actions with the prefix 'win' reference actions on the current window (specific to ApplicationWindow)
+	// Other prefixes can be added to widgets via InsertActionGroup
+	menu.Append("Connect", "custom.connect")
+	menu.Append("Disconnect", "custom.disconnect")
+	menu.Append("Quit", "app.quit")
 
-	// Create the action "wnd.close"
-	wndCloseAction := glib.SimpleActionNew("close", nil)
-	wndCloseAction.Connect("activate", func() {
-		wnd.Close()
+	customActionGroup := glib.SimpleActionGroupNew()
+	MainWindow.InsertActionGroup("custom", customActionGroup)
+
+	// Create an action in the custom action group
+	aConnect := glib.SimpleActionNew("connect", nil)
+	aConnect.Connect("activate", func() {
+		log.Println("CONNECTED")
+		OpenConnectionWindow()
 	})
-	GtkApplication.AddAction(wndCloseAction)
+	customActionGroup.AddAction(aConnect)
+	GtkApplication.AddAction(aConnect)
 
-	return wnd
+	aDisconnect := glib.SimpleActionNew("disconnect", nil)
+	aDisconnect.Connect("activate", func() {
+		log.Println("DISCONNECTED")
+	})
+	customActionGroup.AddAction(aDisconnect)
+	GtkApplication.AddAction(aDisconnect)
+
+	mbtn.SetMenuModel(&menu.MenuModel)
+
+	createTitleBar(mbtn)
+
+	// Add Quit action to menu
+	aQuit := glib.SimpleActionNew("quit", nil)
+	aQuit.Connect("activate", GtkApplication.Quit)
+	GtkApplication.AddAction(aQuit)
+
+	// Add action for X-button
+	MainWindow.Connect("destroy", GtkApplication.Quit)
+}
+
+func createTitleBar(menuBtn *gtk.MenuButton) {
+	header := ui.GetHeaderBar("main_header")
+	header.SetShowCloseButton(true)
+
+	// add the menu button to the header
+	header.PackStart(menuBtn)
+
+	// Assemble the window
+	MainWindow.SetTitlebar(header)
 }

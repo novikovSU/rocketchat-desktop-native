@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/novikovSU/gorocket/api"
 
@@ -80,9 +79,9 @@ func initUI() {
 		if mainWindowIsFocused && msg.ChannelID == model.Chat.ActiveContactId {
 			return
 		}
-		notif := glib.NotificationNew(fmt.Sprintf("%s (%s)", msg.User.Name, msg.User.UserName))
-		notif.SetBody(msg.Text)
-		GtkApplication.SendNotification(appID, notif)
+
+		notifTitle := fmt.Sprintf("%s (%s)", msg.User.Name, msg.User.UserName)
+		ui.SendNotification(notifTitle, msg.Text)
 	})
 }
 

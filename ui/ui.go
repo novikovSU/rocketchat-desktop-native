@@ -9,10 +9,12 @@ import (
 )
 
 var (
-	GtkBuilder gtk.Builder
+	GtkBuilder     gtk.Builder
+	gtkApplication *gtk.Application
 )
 
-func InitUI() {
+func InitUI(app *gtk.Application) {
+	gtkApplication = app
 	GtkBuilder = *createGtkBuilder()
 }
 
@@ -66,4 +68,22 @@ func createListStore(types ...glib.Type) *gtk.ListStore {
 // and is here to simply demo how to hook-up custom callbacks.
 func onMainWindowDestroy() {
 	log.Println("onMainWindowDestroy")
+}
+
+/*
+Creates GTK window with default close action
+*/
+func CreateWindow(id string) *gtk.Window {
+	wnd := GetWindow(id)
+
+	wndCloseAction := glib.SimpleActionNew("close", nil)
+	_, err := wndCloseAction.Connect("activate", func() {
+		wnd.Close()
+	})
+	if err != nil {
+		log.Panicf("Can't add close action to window %s. Cause: %s\n", id, err)
+	}
+	gtkApplication.AddAction(wndCloseAction)
+
+	return wnd
 }
