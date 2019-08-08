@@ -11,4 +11,5 @@ type IContactModel interface {
 	GetDisplayName() string
 	GetUnreadCount() int
 	UpdateUnreadCount(change int)
+	ClearUnreadCount()
 }

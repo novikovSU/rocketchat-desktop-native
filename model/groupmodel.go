@@ -30,6 +30,10 @@ func (g *GroupModel) UpdateUnreadCount(change int) {
 	g.UnreadCount += change
 }
 
+func (g *GroupModel) ClearUnreadCount() {
+	g.UnreadCount = 0
+}
+
 func GroupsToModels(groups []*GroupModel) []IContactModel {
 	models := make([]IContactModel, 0, len(groups))
 	for _, g := range groups {

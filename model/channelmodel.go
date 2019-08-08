@@ -30,6 +30,10 @@ func (ch *ChannelModel) UpdateUnreadCount(change int) {
 	ch.UnreadCount += change
 }
 
+func (ch *ChannelModel) ClearUnreadCount() {
+	ch.UnreadCount = 0
+}
+
 func ChannelsToModels(channels []*ChannelModel) []IContactModel {
 	models := make([]IContactModel, 0, len(channels))
 	for _, ch := range channels {

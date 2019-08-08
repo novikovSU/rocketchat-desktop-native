@@ -293,6 +293,8 @@ func openMainWindow(app *gtk.Application) {
 		//header.SetSubtitle(selectionText)
 		chatCaption.SetText(selectionText)
 		fillChat(chatStore, selectionText)
+		clearContactUnreadCount(contactsStore, selectionText)
+
 	})
 
 	textInput.Connect("key-press-event", func(tv *gtk.TextView, ev *gdk.Event) {
@@ -300,6 +302,8 @@ func openMainWindow(app *gtk.Application) {
 		switch keyEvent.KeyVal() {
 		case gdk.KEY_Control_L, gdk.KEY_Control_R:
 			ctrlPressed = true
+		case gdk.KEY_Shift_L, gdk.KEY_Shift_R:
+			shiftPressed = true
 		}
 	})
 
@@ -307,7 +311,7 @@ func openMainWindow(app *gtk.Application) {
 		keyEvent := &gdk.EventKey{ev}
 		switch keyEvent.KeyVal() {
 		case keyEnter:
-			if !ctrlPressed {
+			if !ctrlPressed && !shiftPressed {
 				buffer, err := tv.GetBuffer()
 				if err != nil {
 					log.Fatal("Unable to get buffer:", err)
@@ -330,6 +334,10 @@ func openMainWindow(app *gtk.Application) {
 			break
 		case gdk.KEY_Control_L, gdk.KEY_Control_R:
 			ctrlPressed = false
+			break
+		case gdk.KEY_Shift_L, gdk.KEY_Shift_R:
+			shiftPressed = false
+			break
 		default:
 			//log.Printf("Keycode: %d\n", keyEvent.KeyVal())
 		}

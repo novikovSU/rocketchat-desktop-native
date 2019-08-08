@@ -30,6 +30,10 @@ func (u *UserModel) UpdateUnreadCount(change int) {
 	u.UnreadCount += change
 }
 
+func (u *UserModel) ClearUnreadCount() {
+	u.UnreadCount = 0
+}
+
 func UsersToModels(users []*UserModel) []IContactModel {
 	models := make([]IContactModel, 0, len(users))
 	for _, u := range users {

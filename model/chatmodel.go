@@ -1,8 +1,9 @@
 package model
 
 import (
-	"github.com/novikovSU/gorocket/api"
 	"strings"
+
+	"github.com/novikovSU/gorocket/api"
 )
 
 var (
@@ -110,6 +111,14 @@ func (chat *ChatModel) GetUnreadCount(id string) int {
 		return 0
 	}
 	return model.GetUnreadCount()
+}
+
+func (chat *ChatModel) ClearUnreadCount(id string) {
+	model := chat.GetModelById(id)
+	if model == nil {
+		return
+	}
+	model.ClearUnreadCount()
 }
 
 func (chat *ChatModel) AddMessage(msg api.Message, me *api.User) {

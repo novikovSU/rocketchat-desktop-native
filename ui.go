@@ -114,6 +114,36 @@ func fillChat(cs *gtk.ListStore, name string) {
 	}
 }
 
+func clearContactUnreadCount(cs *gtk.ListStore, name string) {
+	currID, _ := getRIDByName(name)
+
+	model := model.Chat.GetModelById(strings.Replace(currID, me.ID, "", 1))
+	model.ClearUnreadCount()
+
+	if model != nil {
+		iter, exists := contactsStore.GetIterFirst()
+		if exists {
+			for {
+				val, err := contactsStore.GetValue(iter, ui.ContactListNameColumn)
+				if err == nil {
+					strVal, err := val.GetString()
+					if err == nil {
+						if strings.Compare(strVal, model.GetDisplayName()) == 0 {
+							contactsStore.SetValue(iter, ui.ContactListUnreadCountColumn, getUnreadCount(&model))
+							break
+						} else {
+							if !contactsStore.IterNext(iter) {
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+}
+
 func getSortedChannels() []model.IContactModel {
 	contacts := model.ChannelsMapToModels(model.Chat.Channels)
 	sort.Sort(ui.ContactsSorter(contacts))
