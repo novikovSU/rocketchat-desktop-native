@@ -21,8 +21,8 @@ var (
 	//TODO refactor it
 	ContactsSelection *gtk.TreeSelection
 
-	sendMsgKey      gdk.EventKey
-	preventSendKeys = [...]uint{gdk.KEY_Control_L, gdk.KEY_Control_R, gdk.KEY_Shift_L, gdk.KEY_Shift_R}
+	sendMsgPreventedKeyHeld int
+	preventSendKeys         = [...]uint{gdk.KEY_Control_L, gdk.KEY_Control_R, gdk.KEY_Shift_L, gdk.KEY_Shift_R}
 )
 
 func InitSendMsgControl() {
@@ -36,7 +36,9 @@ func InitSendMsgControl() {
 Handler for send message textInput keyPress event. Stores held keys for handle it in keyUp handler
 */
 func onSendMsgKeyPress(tv *gtk.TextView, event *gdk.Event) {
-	sendMsgKey = gdk.EventKey{event}
+	if isPreventedKeyHeld(&gdk.EventKey{event}) {
+		sendMsgPreventedKeyHeld++
+	}
 }
 
 /*
@@ -44,19 +46,18 @@ Handler for send message textInput keyUp event. Send message to chat. Supports s
 */
 func onSendMsgKeyUp(tv *gtk.TextView, event *gdk.Event) {
 	key := gdk.EventKey{event}
-	if key.KeyVal() == keyEnter {
-		if !isPreventedKeyHeld(&sendMsgKey) {
-			buf := GetTextViewBuffer(tv)
-			msgText := getText(buf)
+	if isPreventedKeyHeld(&key) {
+		sendMsgPreventedKeyHeld--
+	} else if sendMsgPreventedKeyHeld <= 0 && key.KeyVal() == keyEnter {
+		buf := GetTextViewBuffer(tv)
+		msgText := getText(buf)
 
-			if utils.IsNotBlankString(msgText) {
-				selectionText := GetSelectionText(ContactsSelection)
-				buf.SetText("")
-				rocket.PostByNameRT(selectionText, msgText)
-			}
+		if utils.IsNotBlankString(msgText) {
+			selectionText := GetSelectionText(ContactsSelection)
+			buf.SetText("")
+			rocket.PostByNameRT(selectionText, msgText)
 		}
 	}
-	sendMsgKey = key
 }
 
 func isPreventedKeyHeld(key *gdk.EventKey) bool {
