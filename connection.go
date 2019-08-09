@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/novikovSU/rocketchat-desktop-native/rocket"
+	"github.com/novikovSU/rocketchat-desktop-native/settings"
 	"log"
 
 	"github.com/gotk3/gotk3/glib"
@@ -19,8 +21,8 @@ func OpenConnectionWindow() {
 		if testConfig(newConf) {
 			log.Println("connection settings are correct")
 
-			config = newConf
-			storeConfig(config)
+			settings.Conf = newConf
+			settings.StoreConfig(settings.Conf)
 			openMainWindow(GtkApplication)
 
 			wnd.Close()
@@ -52,9 +54,9 @@ func createModal(id string) *gtk.Dialog {
 	return wnd
 }
 
-func createConfig() *Config {
+func createConfig() *settings.Config {
 	//TODO validation
-	config := createDefaultConfig()
+	config := settings.CreateDefaultConfig()
 	config.Server = getInputTextValue("server_input_text")
 	config.User = getInputTextValue("login_input_text")
 	config.Email = getInputTextValue("e_mail_input_text")
@@ -70,7 +72,7 @@ func getInputTextValue(name string) string {
 	return val
 }
 
-func testConfig(config *Config) bool {
-	err := getConnectionSafe(config)
+func testConfig(config *settings.Config) bool {
+	err := rocket.GetConnectionSafe(config)
 	return err == nil
 }

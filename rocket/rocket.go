@@ -1,7 +1,8 @@
-package main
+package rocket
 
 import (
 	"errors"
+	"github.com/novikovSU/rocketchat-desktop-native/settings"
 	"log"
 	"strings"
 	"time"
@@ -16,6 +17,12 @@ import (
 	"github.com/novikovSU/rocketchat-desktop-native/model"
 )
 
+//TODO refactor it
+const (
+	hashSign = "\u0023"     // Hash sign for channels
+	lockSign = "\U0001F512" // Lock sign for private groups
+)
+
 const (
 	contactListUpdateInterval = 45 * time.Minute
 )
@@ -25,7 +32,7 @@ var (
 	clientRT *realtime.Client
 	msgChan  []api.Message
 
-	me         *api.User
+	Me         *api.User
 	allHistory map[string]chatHistory
 	pullChan   chan api.Message
 )
@@ -35,17 +42,17 @@ type chatHistory struct {
 	msgs     []api.Message
 }
 
-func initRocket() {
+func InitRocket() {
 	client = initRESTConnection()
 	clientRT = initRTConnection()
-	me = getSelfInfo()
+	Me = getSelfInfo()
 	loadContactListAsync()
 	subscribeToMessages()
 }
 
 func initRESTConnection() *rest.Client {
-	client := rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
-	err := client.Login(api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
+	client := rest.NewClient(settings.Conf.Server, settings.Conf.Port, settings.Conf.UseTLS, settings.Conf.Debug)
+	err := client.Login(api.UserCredentials{Email: settings.Conf.Email, Name: settings.Conf.User, Password: settings.Conf.Password})
 	if err != nil {
 		log.Fatalf("login err: %s\n", err)
 	}
@@ -55,17 +62,17 @@ func initRESTConnection() *rest.Client {
 
 func initRTConnection() *realtime.Client {
 	proto := "ws"
-	if config.UseTLS {
+	if settings.Conf.UseTLS {
 		proto = "wss"
 	}
-	client, _ := realtime.NewClient(proto, config.Server, config.Port, config.Debug)
-	client.Login(&api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
+	client, _ := realtime.NewClient(proto, settings.Conf.Server, settings.Conf.Port, settings.Conf.Debug)
+	client.Login(&api.UserCredentials{Email: settings.Conf.Email, Name: settings.Conf.User, Password: settings.Conf.Password})
 
 	return client
 }
 
 func getSelfInfo() *api.User {
-	user, err := getUserByUsername(config.User)
+	user, err := getUserByUsername(settings.Conf.User)
 	if err != nil {
 		log.Printf("can't get self info: %s\n", err)
 	}
@@ -74,7 +81,7 @@ func getSelfInfo() *api.User {
 }
 
 //deprecated
-func getConnectionSafe(config *Config) error {
+func GetConnectionSafe(config *settings.Config) error {
 	client = rest.NewClient(config.Server, config.Port, config.UseTLS, config.Debug)
 	return client.Login(api.UserCredentials{Email: config.Email, Name: config.User, Password: config.Password})
 }
@@ -179,7 +186,7 @@ func getIDByName(name string) (string, error) {
 	//	return "", nil
 }
 
-func getRIDByName(name string) (string, error) {
+func GetRIDByName(name string) (string, error) {
 	firstSymbol := string([]rune(name)[0])
 
 	switch firstSymbol {
@@ -206,7 +213,7 @@ func getRIDByName(name string) (string, error) {
 			log.Printf("ERROR: get user id for name %s err: %s\n", name, err)
 			return "", err
 		}
-		return me.ID + user.ID, nil
+		return Me.ID + user.ID, nil
 	}
 	//	return "", nil
 }
@@ -222,14 +229,14 @@ func getHistoryByName(name string) ([]api.Message, error) {
 func postByNameREST(name string, text string) {
 	_, err := client.Chat().Post(&rest.ChatPostOptions{Channel: model.Chat.ActiveContactId, Text: text})
 	if err != nil {
-		if config.Debug {
+		if settings.Conf.Debug {
 			log.Printf("send message err: %s\n", err)
 		}
 	}
 }
 
-func postByNameRT(name string, text string) {
-	roomID, err := getRIDByName(name)
+func PostByNameRT(name string, text string) {
+	roomID, err := GetRIDByName(name)
 	if err != nil {
 		log.Printf("can't get room by name %s: %s\n", name, err)
 		return
@@ -241,8 +248,8 @@ func postByNameRT(name string, text string) {
 	}
 }
 
-func ownMessage(msg api.Message) bool {
-	return me.ID == msg.User.ID
+func OwnMessage(msg api.Message) bool {
+	return Me.ID == msg.User.ID
 }
 
 func getNewMessages(c *rest.Client) []api.Message {
@@ -324,7 +331,7 @@ func getNewMessages(c *rest.Client) []api.Message {
 	return result
 }
 
-func getHistoryByID(id string) ([]api.Message, error) {
+func GetHistoryByID(id string) ([]api.Message, error) {
 	msgs, err := clientRT.LoadHistory(&realtime.HistoryOptions{RoomID: id})
 	if err != nil {
 		log.Printf("ERROR: get messages for room with id (%s) err: %s\n", id, err)
@@ -463,7 +470,7 @@ func subscribeToMessages() {
 			log.Printf("CurrentChatID: %s\n", model.Chat.ActiveContactId)
 			log.Printf("Incoming message: %+v\n", msg)
 
-			model.Chat.AddMessage(msg, me)
+			model.Chat.AddMessage(msg, Me)
 			bus.Pub(bus.Messages_new, msg)
 		}
 	}()

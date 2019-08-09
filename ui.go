@@ -4,6 +4,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/novikovSU/rocketchat-desktop-native/config"
+	"github.com/novikovSU/rocketchat-desktop-native/rocket"
 	"log"
 	"sort"
 	"strconv"
@@ -35,7 +37,7 @@ func initUI() {
 
 	bus.Sub(bus.Messages_new, func(msg api.Message) {
 		cs := chatStore
-		if msg.ChannelID == model.Chat.ActiveContactId || msg.ChannelID == me.ID+model.Chat.ActiveContactId {
+		if msg.ChannelID == model.Chat.ActiveContactId || msg.ChannelID == rocket.Me.ID+model.Chat.ActiveContactId {
 			text := strings.Replace(msg.Text, "&nbsp;", "", -1)
 			text = strings.Replace(text, "<", "", -1)
 			text = strings.Replace(text, ">", "", -1)
@@ -45,7 +47,7 @@ func initUI() {
 		}
 
 		//TODO create function for get contactId by message
-		model := model.Chat.GetModelById(strings.Replace(msg.ChannelID, me.ID, "", 1))
+		model := model.Chat.GetModelById(strings.Replace(msg.ChannelID, rocket.Me.ID, "", 1))
 		if model != nil {
 			iter, exists := contactsStore.GetIterFirst()
 			if exists {
@@ -73,7 +75,7 @@ func initUI() {
 		if config.Debug {
 			log.Printf("DEBUG: Prepare to notificate")
 		}
-		if ownMessage(msg) {
+		if rocket.OwnMessage(msg) {
 			return
 		}
 		if mainWindowIsFocused && msg.ChannelID == model.Chat.ActiveContactId {
@@ -97,9 +99,9 @@ func drawMessage(cs *gtk.ListStore, msg api.Message) error {
 }
 
 func fillChat(cs *gtk.ListStore, name string) {
-	model.Chat.ActiveContactId, _ = getRIDByName(name)
+	model.Chat.ActiveContactId, _ = rocket.GetRIDByName(name)
 
-	msgs, err := getHistoryByID(model.Chat.ActiveContactId)
+	msgs, err := rocket.GetHistoryByID(model.Chat.ActiveContactId)
 	if err != nil {
 		log.Printf("ERROR: can't get history by name %s: %s\n", name, err)
 		return
@@ -114,9 +116,9 @@ func fillChat(cs *gtk.ListStore, name string) {
 }
 
 func clearContactUnreadCount(cs *gtk.ListStore, name string) {
-	currID, _ := getRIDByName(name)
+	currID, _ := rocket.GetRIDByName(name)
 
-	model := model.Chat.GetModelById(strings.Replace(currID, me.ID, "", 1))
+	model := model.Chat.GetModelById(strings.Replace(currID, rocket.Me.ID, "", 1))
 	model.ClearUnreadCount()
 
 	if model != nil {

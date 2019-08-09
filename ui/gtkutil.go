@@ -7,6 +7,20 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
+func safe(obj interface{}, err error) {
+	if err != nil {
+		log.Panicf("Could not perform operation on object %s. Cause: %s\n", obj, err)
+	}
+}
+
+func GetTextViewBuffer(tv *gtk.TextView) *gtk.TextBuffer {
+	buf, err := tv.GetBuffer()
+	if err != nil {
+		log.Panic(err)
+	}
+	return buf
+}
+
 func GetGtkButton(name string) *gtk.Button {
 	return (*getGtkObjectSafe(name)).(*gtk.Button)
 }

@@ -1,4 +1,4 @@
-package main
+package settings
 
 import (
 	"encoding/json"
@@ -20,11 +20,11 @@ type Config struct {
 }
 
 var (
-	config       *Config
+	Conf         *Config
 	settingsFile = "settings.json"
 )
 
-func getConfig(params ...string) (*Config, error) {
+func GetConfig(params ...string) (*Config, error) {
 	var config Config
 
 	if len(params) > 0 {
@@ -49,11 +49,11 @@ func getConfig(params ...string) (*Config, error) {
 	return &config, nil
 }
 
-func createDefaultConfig() *Config {
+func CreateDefaultConfig() *Config {
 	return &Config{UseTLS: true}
 }
 
-func storeConfig(config *Config) error {
+func StoreConfig(config *Config) error {
 	confContent, err := json.MarshalIndent(config, "", " ")
 	if err == nil {
 		err = ioutil.WriteFile(settingsFile, confContent, 0644)

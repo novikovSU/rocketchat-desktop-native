@@ -1,22 +1,15 @@
 package main
 
 import (
-	"log"
-	"os"
-	"regexp"
-	"strings"
-
-	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/pango"
-
 	cfg "github.com/novikovSU/rocketchat-desktop-native/config"
+	"github.com/novikovSU/rocketchat-desktop-native/rocket"
+	"github.com/novikovSU/rocketchat-desktop-native/settings"
 	"github.com/novikovSU/rocketchat-desktop-native/ui"
-)
-
-const (
-	keyEnter = 65293
+	"log"
+	"os"
 )
 
 var (
@@ -85,29 +78,6 @@ func onChanged(selection *gtk.TreeSelection, label *gtk.Label) {
 	}
 }
 
-func getSelectionText(selection *gtk.TreeSelection) (selectionText string) {
-	var iter *gtk.TreeIter
-	var model gtk.ITreeModel
-	var ok bool
-	model, iter, ok = selection.GetSelected()
-
-	if ok {
-		value, err := model.(*gtk.TreeModel).GetValue(iter, 0)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		text, err := value.GetString()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		selectionText = text
-	}
-
-	return
-}
-
 func main() {
 	// Create a new application.
 	app, err := gtk.ApplicationNew(cfg.AppID, glib.APPLICATION_FLAGS_NONE)
@@ -129,7 +99,7 @@ func main() {
 		ui.SendNotification("Rocket.Chat Desktop native", "application activated")
 
 		// Get application config
-		config, err = getConfig()
+		settings.Conf, err = settings.GetConfig()
 		if err == nil {
 			openMainWindow(app)
 		} else {
@@ -140,7 +110,7 @@ func main() {
 		initUI()
 
 		// Get Rocket.Chat connection
-		initRocket()
+		rocket.InitRocket()
 
 		//		systray.Run(onSysTrayReady, onSysTrayExit)
 	})
@@ -183,21 +153,21 @@ func openMainWindow(app *gtk.Application) {
 
 	})
 
-	textInput := ui.GetTextView("text_input")
 	// ------------------
 
 	contactsStore = cs
 
 	chatStore = initList(chatList)
 
-	contactsSelection, err := contactList.GetSelection()
+	sel, err := contactList.GetSelection()
 	if err != nil {
 		log.Fatal(err)
 	}
+	ui.ContactsSelection = sel
 
-	contactsSelection.Connect("changed", func() {
+	ui.ContactsSelection.Connect("changed", func() {
 		//onChanged(contactsSelection, chatCaption)
-		selectionText := getSelectionText(contactsSelection)
+		selectionText := ui.GetSelectionText(ui.ContactsSelection)
 		//header.SetSubtitle(selectionText)
 		chatCaption.SetText(selectionText)
 		fillChat(chatStore, selectionText)
@@ -205,51 +175,7 @@ func openMainWindow(app *gtk.Application) {
 
 	})
 
-	textInput.Connect("key-press-event", func(tv *gtk.TextView, ev *gdk.Event) {
-		keyEvent := &gdk.EventKey{ev}
-		switch keyEvent.KeyVal() {
-		case gdk.KEY_Control_L, gdk.KEY_Control_R:
-			ctrlPressed = true
-		case gdk.KEY_Shift_L, gdk.KEY_Shift_R:
-			shiftPressed = true
-		}
-	})
-
-	textInput.Connect("key-release-event", func(tv *gtk.TextView, ev *gdk.Event) {
-		keyEvent := &gdk.EventKey{ev}
-		switch keyEvent.KeyVal() {
-		case keyEnter:
-			if !ctrlPressed && !shiftPressed {
-				buffer, err := tv.GetBuffer()
-				if err != nil {
-					log.Fatal("Unable to get buffer:", err)
-				}
-				start, end := buffer.GetBounds()
-
-				inputText, err := buffer.GetText(start, end, true)
-				if err != nil {
-					log.Fatal("Unable to get text:", err)
-				}
-				inputText = strings.TrimSuffix(inputText, "\n")
-
-				match, _ := regexp.MatchString("^(\\s*)$", inputText)
-				if !match {
-					selectionText := getSelectionText(contactsSelection)
-					postByNameRT(selectionText, inputText)
-					buffer.SetText("")
-				}
-			}
-			break
-		case gdk.KEY_Control_L, gdk.KEY_Control_R:
-			ctrlPressed = false
-			break
-		case gdk.KEY_Shift_L, gdk.KEY_Shift_R:
-			shiftPressed = false
-			break
-		default:
-			//log.Printf("Keycode: %d\n", keyEvent.KeyVal())
-		}
-	})
+	ui.InitSendMsgControl()
 
 	MainWindow.ShowAll()
 	app.AddWindow(MainWindow)
