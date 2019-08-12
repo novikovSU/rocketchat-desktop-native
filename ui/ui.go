@@ -6,6 +6,8 @@ import (
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/pango"
+
+	"github.com/novikovSU/rocketchat-desktop-native/utils"
 )
 
 var (
@@ -86,4 +88,25 @@ func CreateWindow(id string) *gtk.Window {
 	gtkApplication.AddAction(wndCloseAction)
 
 	return wnd
+}
+
+/**
+Returns the string value of specified column of treeview row selected
+*/
+func GetTreeViewSelectionVal(tv *gtk.TreeView, column int) string {
+	selection, err := tv.GetSelection()
+	utils.AssertErr(err)
+
+	model, iter, ok := selection.GetSelected()
+	if ok {
+		value, err := model.(*gtk.TreeModel).GetValue(iter, column)
+		utils.AssertErr(err)
+
+		val, err := value.GetString()
+		utils.AssertErr(err)
+
+		return val
+	}
+
+	return ""
 }

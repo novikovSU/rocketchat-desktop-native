@@ -8,7 +8,7 @@ const (
 type IContactModel interface {
 	GetId() string
 	GetName() string
-	GetDisplayName() string
+	String() string
 	GetUnreadCount() int
 	UpdateUnreadCount(change int)
 	ClearUnreadCount()

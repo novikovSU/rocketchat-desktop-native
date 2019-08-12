@@ -18,9 +18,6 @@ const (
 )
 
 var (
-	//TODO refactor it
-	ContactsSelection *gtk.TreeSelection
-
 	sendMsgPreventedKeyHeld int
 	preventSendKeys         = [...]uint{gdk.KEY_Control_L, gdk.KEY_Control_R, gdk.KEY_Shift_L, gdk.KEY_Shift_R}
 )
@@ -53,7 +50,7 @@ func onSendMsgKeyUp(tv *gtk.TextView, event *gdk.Event) {
 		msgText := getText(buf)
 
 		if utils.IsNotBlankString(msgText) {
-			selectionText := GetSelectionText(ContactsSelection)
+			selectionText := GetTreeViewSelectionVal(ContactList, 0)
 			buf.SetText("")
 			rocket.PostByNameRT(selectionText, msgText)
 		}
@@ -77,28 +74,4 @@ func getText(buf *gtk.TextBuffer) string {
 		log.Fatal("Unable to get text:", err)
 	}
 	return strings.TrimSuffix(inputText, "\n")
-}
-
-//TODO refactor it
-func GetSelectionText(selection *gtk.TreeSelection) (selectionText string) {
-	var iter *gtk.TreeIter
-	var model gtk.ITreeModel
-	var ok bool
-	model, iter, ok = selection.GetSelected()
-
-	if ok {
-		value, err := model.(*gtk.TreeModel).GetValue(iter, 0)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		text, err := value.GetString()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		selectionText = text
-	}
-
-	return
 }

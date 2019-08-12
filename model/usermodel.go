@@ -18,7 +18,7 @@ func (u *UserModel) GetName() string {
 	return u.User.Name
 }
 
-func (u *UserModel) GetDisplayName() string {
+func (u *UserModel) String() string {
 	return u.GetName()
 }
 

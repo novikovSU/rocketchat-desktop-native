@@ -16,12 +16,6 @@ var (
 	GtkApplication *gtk.Application
 	MainWindow     *gtk.Window
 
-	contactsStore *gtk.ListStore
-	chatStore     *gtk.ListStore
-
-	ctrlPressed  = false
-	shiftPressed = false
-
 	mainWindowIsFocused = false
 )
 
@@ -50,11 +44,6 @@ func initList(list *gtk.TreeView) *gtk.ListStore {
 	list.SetModel(store)
 
 	return store
-}
-
-func addToList(store *gtk.ListStore, text string) {
-	iter := store.Append()
-	store.SetValue(iter, 0, text)
 }
 
 func onChanged(selection *gtk.TreeSelection, label *gtk.Label) {
@@ -139,8 +128,8 @@ func openMainWindow(app *gtk.Application) {
 
 	createMenuBar()
 
-	contactList, cs := ui.CreateContactListTreeView()
-	chatCaption := ui.GetLabel("chat_caption")
+	ui.InitContactListControl()
+
 	chatList := ui.GetTreeView("chat_list")
 	rightScrolledWindow := ui.GetScrolledWindow("right_scrolled_window")
 
@@ -155,25 +144,7 @@ func openMainWindow(app *gtk.Application) {
 
 	// ------------------
 
-	contactsStore = cs
-
-	chatStore = initList(chatList)
-
-	sel, err := contactList.GetSelection()
-	if err != nil {
-		log.Fatal(err)
-	}
-	ui.ContactsSelection = sel
-
-	ui.ContactsSelection.Connect("changed", func() {
-		//onChanged(contactsSelection, chatCaption)
-		selectionText := ui.GetSelectionText(ui.ContactsSelection)
-		//header.SetSubtitle(selectionText)
-		chatCaption.SetText(selectionText)
-		fillChat(chatStore, selectionText)
-		clearContactUnreadCount(contactsStore, selectionText)
-
-	})
+	ui.ChatStore = initList(chatList)
 
 	ui.InitSendMsgControl()
 

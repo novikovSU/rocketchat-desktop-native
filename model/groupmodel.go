@@ -18,7 +18,7 @@ func (g *GroupModel) GetName() string {
 	return g.Group.Name
 }
 
-func (g *GroupModel) GetDisplayName() string {
+func (g *GroupModel) String() string {
 	return lockSign + g.GetName()
 }
 

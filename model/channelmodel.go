@@ -18,7 +18,7 @@ func (ch *ChannelModel) GetName() string {
 	return ch.Channel.Name
 }
 
-func (ch *ChannelModel) GetDisplayName() string {
+func (ch *ChannelModel) String() string {
 	return hashSign + ch.GetName()
 }
 
