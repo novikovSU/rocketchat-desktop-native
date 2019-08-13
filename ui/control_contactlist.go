@@ -23,21 +23,21 @@ var (
 )
 
 func InitContactListControl() {
-	ContactList, ContactsStore = CreateContactListTreeView()
+	ContactList, ContactsStore = createContactListTreeView()
 	chatCaption := GetLabel("chat_caption")
 
 	sel, err := ContactList.GetSelection()
 	utils.AssertErr(err)
 
-	safe(sel.Connect("changed", func() {
+	utils.Safe(sel.Connect("changed", func() {
 		selVal := GetTreeViewSelectionVal(ContactList, ContactListNameColumn)
 		chatCaption.SetText(selVal)
-		refreshChatHistory(ChatStore, selVal)
+		refreshChatHistory(chatStore, selVal)
 		clearContactUnreadCount(ContactsStore, selVal)
 	}))
 }
 
-func CreateContactListTreeView() (*gtk.TreeView, *gtk.ListStore) {
+func createContactListTreeView() (*gtk.TreeView, *gtk.ListStore) {
 	contactList := GetTreeView("contact_list")
 
 	contactList.AppendColumn(createTextViewTextColumn("name", ContactListNameColumn))
@@ -64,7 +64,7 @@ func clearContactUnreadCount(cs *gtk.ListStore, name string) {
 					strVal, err := val.GetString()
 					if err == nil {
 						if strings.Compare(strVal, model.String()) == 0 {
-							ContactsStore.SetValue(iter, ContactListUnreadCountColumn, GetUnreadCount(&model))
+							ContactsStore.SetValue(iter, ContactListUnreadCountColumn, getUnreadCount(&model))
 							break
 						} else {
 							if !ContactsStore.IterNext(iter) {
@@ -78,7 +78,7 @@ func clearContactUnreadCount(cs *gtk.ListStore, name string) {
 	}
 }
 
-func GetUnreadCount(contactModel *model.IContactModel) string {
+func getUnreadCount(contactModel *model.IContactModel) string {
 	count := (*contactModel).GetUnreadCount()
 	if count > 0 {
 		return strconv.Itoa(count)

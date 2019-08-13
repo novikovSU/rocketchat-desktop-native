@@ -5,12 +5,14 @@ package ui
 */
 
 import (
-	"github.com/gotk3/gotk3/gdk"
-	"github.com/gotk3/gotk3/gtk"
-	"github.com/novikovSU/rocketchat-desktop-native/rocket"
-	"github.com/novikovSU/rocketchat-desktop-native/utils"
 	"log"
 	"strings"
+
+	"github.com/gotk3/gotk3/gdk"
+	"github.com/gotk3/gotk3/gtk"
+
+	"github.com/novikovSU/rocketchat-desktop-native/rocket"
+	"github.com/novikovSU/rocketchat-desktop-native/utils"
 )
 
 const (
@@ -25,8 +27,8 @@ var (
 func InitSendMsgControl() {
 	textInput := GetTextView("text_input")
 
-	safe(textInput.Connect("key-press-event", onSendMsgKeyPress))
-	safe(textInput.Connect("key-release-event", onSendMsgKeyUp))
+	utils.Safe(textInput.Connect("key-press-event", onSendMsgKeyPress))
+	utils.Safe(textInput.Connect("key-release-event", onSendMsgKeyUp))
 }
 
 /*

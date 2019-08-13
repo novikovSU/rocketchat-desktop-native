@@ -1,20 +1,19 @@
-package main
+package ui
 
 import (
-	"github.com/novikovSU/rocketchat-desktop-native/rocket"
-	"github.com/novikovSU/rocketchat-desktop-native/settings"
 	"log"
 
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 
-	"github.com/novikovSU/rocketchat-desktop-native/ui"
+	"github.com/novikovSU/rocketchat-desktop-native/rocket"
+	"github.com/novikovSU/rocketchat-desktop-native/settings"
 )
 
-func OpenConnectionWindow() {
-	wnd := createModal("connection_window")
+func OpenConnectionWindow(app *gtk.Application) {
+	wnd := createModal(app, "connection_window")
 
-	okBtn := ui.GetGtkButton("connection_ok_button")
+	okBtn := GetGtkButton("connection_ok_button")
 	_, _ = okBtn.Connect("clicked", func() {
 		log.Println("connection_ok_button clicked")
 		newConf := createConfig()
@@ -23,7 +22,7 @@ func OpenConnectionWindow() {
 
 			settings.Conf = newConf
 			settings.StoreConfig(settings.Conf)
-			openMainWindow(GtkApplication)
+			OpenMainWindow(app)
 
 			wnd.Close()
 		} else {
@@ -33,11 +32,11 @@ func OpenConnectionWindow() {
 	})
 
 	wnd.ShowAll()
-	GtkApplication.AddWindow(wnd)
+	app.AddWindow(wnd)
 }
 
-func createModal(id string) *gtk.Dialog {
-	obj, err := ui.GtkBuilder.GetObject(id)
+func createModal(app *gtk.Application, id string) *gtk.Dialog {
+	obj, err := GtkBuilder.GetObject(id)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -49,7 +48,7 @@ func createModal(id string) *gtk.Dialog {
 	wndCloseAction.Connect("activate", func() {
 		wnd.Close()
 	})
-	GtkApplication.AddAction(wndCloseAction)
+	app.AddAction(wndCloseAction)
 
 	return wnd
 }
@@ -66,7 +65,7 @@ func createConfig() *settings.Config {
 }
 
 func getInputTextValue(name string) string {
-	ctrl := ui.GetGtkInputText(name)
+	ctrl := GetGtkInputText(name)
 	val, _ := ctrl.GetText()
 
 	return val

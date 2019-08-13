@@ -13,3 +13,9 @@ func AssertErrMsg(err error, msg string) {
 		log.Fatalf(msg, err)
 	}
 }
+
+func Safe(obj interface{}, err error) {
+	if err != nil {
+		log.Panicf("Could not perform operation on object %s. Cause: %s\n", obj, err)
+	}
+}
