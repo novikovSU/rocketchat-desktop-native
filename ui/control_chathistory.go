@@ -40,8 +40,3 @@ func drawMessage(cs *gtk.ListStore, msg api.Message) error {
 
 	return nil
 }
-
-func addToList(store *gtk.ListStore, text string) {
-	iter := store.Append()
-	store.SetValue(iter, 0, text)
-}

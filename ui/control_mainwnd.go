@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	MainWindowIsFocused bool
+	mainWindowIsFocused bool
 )
 
 func OpenMainWindow(app *gtk.Application) {
@@ -18,12 +18,12 @@ func OpenMainWindow(app *gtk.Application) {
 
 	utils.Safe(wnd.Connect("focus-in-event", func() {
 		log.Printf("DEBUG: Main window is focused\n")
-		MainWindowIsFocused = true
+		mainWindowIsFocused = true
 	}))
 
 	utils.Safe(wnd.Connect("focus-out-event", func() {
 		log.Printf("DEBUG: Main window is UNfocused\n")
-		MainWindowIsFocused = false
+		mainWindowIsFocused = false
 	}))
 
 	createMenuBar(app, wnd)
@@ -37,12 +37,6 @@ func OpenMainWindow(app *gtk.Application) {
 }
 
 func createMenuBar(app *gtk.Application, wnd *gtk.Window) {
-	/* DISABLE custom header and menu */
-	// Get a headerbar
-
-	// Create a new menu button
-	mbtn := GetMenuButton("main_menu_button")
-
 	// Set up the menu model for the button
 	menu := glib.MenuNew()
 
@@ -53,36 +47,47 @@ func createMenuBar(app *gtk.Application, wnd *gtk.Window) {
 	menu.Append("Disconnect", "custom.disconnect")
 	menu.Append("Quit", "app.quit")
 
-	customActionGroup := glib.SimpleActionGroupNew()
-	wnd.InsertActionGroup("custom", customActionGroup)
+	wnd.InsertActionGroup("custom", createCustomActionGroup(app))
 
-	// Create an action in the custom action group
-	aConnect := glib.SimpleActionNew("connect", nil)
-	aConnect.Connect("activate", func() {
-		log.Println("CONNECTED")
-		OpenConnectionWindow(app)
-	})
-	customActionGroup.AddAction(aConnect)
-	app.AddAction(aConnect)
+	// Create a new menu button
+	menuBtn := GetMenuButton("main_menu_button")
+	menuBtn.SetMenuModel(&menu.MenuModel)
 
-	aDisconnect := glib.SimpleActionNew("disconnect", nil)
-	aDisconnect.Connect("activate", func() {
-		log.Println("DISCONNECTED")
-	})
-	customActionGroup.AddAction(aDisconnect)
-	app.AddAction(aDisconnect)
-
-	mbtn.SetMenuModel(&menu.MenuModel)
-
-	createTitleBar(wnd, mbtn)
+	createTitleBar(wnd, menuBtn)
 
 	// Add Quit action to menu
-	aQuit := glib.SimpleActionNew("quit", nil)
-	aQuit.Connect("activate", app.Quit)
-	app.AddAction(aQuit)
+	quitAction := glib.SimpleActionNew("quit", nil)
+	utils.Safe(quitAction.Connect("activate", app.Quit))
+	app.AddAction(quitAction)
 
 	// Add action for X-button
-	wnd.Connect("destroy", app.Quit)
+	utils.Safe(wnd.Connect("destroy", app.Quit))
+}
+
+func createCustomActionGroup(app *gtk.Application) *glib.SimpleActionGroup {
+	actionGroup := glib.SimpleActionGroupNew()
+
+	// Create actions in the custom action group
+	addAction(app, actionGroup, "connect", onConnectMenuAction)
+	addAction(app, actionGroup, "disconnect", onDisconnectMenuAction)
+
+	return actionGroup
+}
+
+func onConnectMenuAction(app *gtk.Application) {
+	log.Println("CONNECTED")
+	OpenConnectionWindow(app)
+}
+
+func onDisconnectMenuAction(app *gtk.Application) {
+	log.Println("DISCONNECTED")
+}
+
+func addAction(app *gtk.Application, group *glib.SimpleActionGroup, name string, fn func(app *gtk.Application)) {
+	action := glib.SimpleActionNew(name, nil)
+	group.AddAction(action)
+
+	utils.Safe(action.Connect("activate", func() { fn(app) }))
 }
 
 func createTitleBar(wnd *gtk.Window, menuBtn *gtk.MenuButton) {

@@ -120,7 +120,7 @@ func GetTreeViewSelectionVal(tv *gtk.TreeView, column int) string {
 func InitSubscribers() {
 	bus.Sub(bus.Contacts_update_finished, func() {
 		//TODO react to remove users/groups/channels: if it happens, what should we do with selection, for example?
-		cs := ContactsStore
+		cs := contactsStore
 		cs.Clear()
 
 		addContactsToList(cs, getSortedChannels())
@@ -142,18 +142,18 @@ func InitSubscribers() {
 		//TODO create function for get contactId by message
 		model := model.Chat.GetModelById(strings.Replace(msg.ChannelID, rocket.Me.ID, "", 1))
 		if model != nil {
-			iter, exists := ContactsStore.GetIterFirst()
+			iter, exists := contactsStore.GetIterFirst()
 			if exists {
 				for {
-					val, err := ContactsStore.GetValue(iter, ContactListNameColumn)
+					val, err := contactsStore.GetValue(iter, ContactListNameColumn)
 					if err == nil {
 						strVal, err := val.GetString()
 						if err == nil {
 							if strings.Compare(strVal, model.String()) == 0 {
-								ContactsStore.SetValue(iter, ContactListUnreadCountColumn, getUnreadCount(&model))
+								contactsStore.SetValue(iter, ContactListUnreadCountColumn, getUnreadCount(&model))
 								break
 							} else {
-								if !ContactsStore.IterNext(iter) {
+								if !contactsStore.IterNext(iter) {
 									break
 								}
 							}
@@ -171,7 +171,7 @@ func InitSubscribers() {
 		if rocket.OwnMessage(msg) {
 			return
 		}
-		if MainWindowIsFocused && msg.ChannelID == model.Chat.ActiveContactId {
+		if mainWindowIsFocused && msg.ChannelID == model.Chat.ActiveContactId {
 			return
 		}
 
@@ -209,4 +209,8 @@ func addContactsToList(cs *gtk.ListStore, contacts []model.IContactModel) {
 			utils.AssertErr(cs.SetValue(iter, ContactListUnreadCountColumn, getUnreadCount(&contact)))
 		}
 	}
+}
+
+func addToList(store *gtk.ListStore, text string) {
+	utils.AssertErr(store.SetValue(store.Append(), 0, text))
 }

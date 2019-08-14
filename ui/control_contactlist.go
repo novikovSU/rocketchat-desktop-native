@@ -18,22 +18,22 @@ const (
 )
 
 var (
-	ContactList   *gtk.TreeView
-	ContactsStore *gtk.ListStore
+	contactList   *gtk.TreeView
+	contactsStore *gtk.ListStore
 )
 
 func InitContactListControl() {
-	ContactList, ContactsStore = createContactListTreeView()
+	contactList, contactsStore = createContactListTreeView()
 	chatCaption := GetLabel("chat_caption")
 
-	sel, err := ContactList.GetSelection()
+	sel, err := contactList.GetSelection()
 	utils.AssertErr(err)
 
 	utils.Safe(sel.Connect("changed", func() {
-		selVal := GetTreeViewSelectionVal(ContactList, ContactListNameColumn)
+		selVal := GetTreeViewSelectionVal(contactList, ContactListNameColumn)
 		chatCaption.SetText(selVal)
 		refreshChatHistory(chatStore, selVal)
-		clearContactUnreadCount(ContactsStore, selVal)
+		clearContactUnreadCount(contactsStore, selVal)
 	}))
 }
 
@@ -52,22 +52,23 @@ func createContactListTreeView() (*gtk.TreeView, *gtk.ListStore) {
 func clearContactUnreadCount(cs *gtk.ListStore, name string) {
 	currID, _ := rocket.GetRIDByName(name)
 
-	model := model.Chat.GetModelById(strings.Replace(currID, rocket.Me.ID, "", 1))
-	model.ClearUnreadCount()
+	mdl := model.Chat.GetModelById(strings.Replace(currID, rocket.Me.ID, "", 1))
+	mdl.ClearUnreadCount()
 
-	if model != nil {
-		iter, exists := ContactsStore.GetIterFirst()
+	if mdl != nil {
+		iter, exists := cs.GetIterFirst()
 		if exists {
+			//TODO can we don't use infinite loop syntax?
 			for {
-				val, err := ContactsStore.GetValue(iter, ContactListNameColumn)
+				val, err := cs.GetValue(iter, ContactListNameColumn)
 				if err == nil {
 					strVal, err := val.GetString()
 					if err == nil {
-						if strings.Compare(strVal, model.String()) == 0 {
-							ContactsStore.SetValue(iter, ContactListUnreadCountColumn, getUnreadCount(&model))
+						if strings.Compare(strVal, mdl.String()) == 0 {
+							utils.AssertErr(cs.SetValue(iter, ContactListUnreadCountColumn, getUnreadCount(&mdl)))
 							break
 						} else {
-							if !ContactsStore.IterNext(iter) {
+							if !contactsStore.IterNext(iter) {
 								break
 							}
 						}

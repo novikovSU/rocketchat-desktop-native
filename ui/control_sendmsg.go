@@ -5,7 +5,6 @@ package ui
 */
 
 import (
-	"log"
 	"strings"
 
 	"github.com/gotk3/gotk3/gdk"
@@ -52,7 +51,7 @@ func onSendMsgKeyUp(tv *gtk.TextView, event *gdk.Event) {
 		msgText := getText(buf)
 
 		if utils.IsNotBlankString(msgText) {
-			selectionText := GetTreeViewSelectionVal(ContactList, 0)
+			selectionText := GetTreeViewSelectionVal(contactList, 0)
 			buf.SetText("")
 			rocket.PostByNameRT(selectionText, msgText)
 		}
@@ -72,8 +71,7 @@ func getText(buf *gtk.TextBuffer) string {
 	start, end := buf.GetBounds()
 
 	inputText, err := buf.GetText(start, end, true)
-	if err != nil {
-		log.Fatal("Unable to get text:", err)
-	}
+	utils.AssertErrMsg(err, "Unable to get text: %s")
+
 	return strings.TrimSuffix(inputText, "\n")
 }
