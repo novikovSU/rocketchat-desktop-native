@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 
@@ -18,7 +17,7 @@ func refreshChatHistory(cs *gtk.ListStore, name string) {
 
 	msgs, err := rocket.GetHistoryByID(model.Chat.ActiveContactId)
 	if err != nil {
-		log.Printf("ERROR: can't get history by name %s: %s\n", name, err)
+		logger.Error("can't get history by name %s: %s\n", name, err)
 		return
 	}
 

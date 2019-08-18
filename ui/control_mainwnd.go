@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"log"
-
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 
@@ -17,12 +15,12 @@ func OpenMainWindow(app *gtk.Application) {
 	wnd := CreateWindow("main_window")
 
 	utils.Safe(wnd.Connect("focus-in-event", func() {
-		log.Printf("DEBUG: Main window is focused\n")
+		logger.Debug("Main window is focused")
 		mainWindowIsFocused = true
 	}))
 
 	utils.Safe(wnd.Connect("focus-out-event", func() {
-		log.Printf("DEBUG: Main window is UNfocused\n")
+		logger.Debug("Main window is UNfocused")
 		mainWindowIsFocused = false
 	}))
 
@@ -75,12 +73,12 @@ func createCustomActionGroup(app *gtk.Application) *glib.SimpleActionGroup {
 }
 
 func onConnectMenuAction(app *gtk.Application) {
-	log.Println("CONNECTED")
+	logger.Debug("CONNECTED")
 	OpenConnectionWindow(app)
 }
 
 func onDisconnectMenuAction(app *gtk.Application) {
-	log.Println("DISCONNECTED")
+	logger.Debug("DISCONNECTED")
 }
 
 func addAction(app *gtk.Application, group *glib.SimpleActionGroup, name string, fn func(app *gtk.Application)) {

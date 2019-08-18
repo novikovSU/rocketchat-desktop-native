@@ -2,8 +2,9 @@ package rocket
 
 import (
 	"errors"
+	log "github.com/chaykin/log4go"
 	"github.com/novikovSU/rocketchat-desktop-native/settings"
-	"log"
+	"github.com/novikovSU/rocketchat-desktop-native/utils"
 	"time"
 
 	bolt "go.etcd.io/bbolt"
@@ -33,6 +34,8 @@ var (
 
 	allHistory map[string]chatHistory
 	pullChan   chan api.Message
+
+	logger *log.Filter
 )
 
 type chatHistory struct {
@@ -47,12 +50,14 @@ func InitRocket() {
 	subscribeToMessages()
 }
 
+func init() {
+	logger = utils.CreateLogger("rocket")
+}
+
 func initRESTConnection() *rest.Client {
 	client := rest.NewClient(settings.Conf.Server, settings.Conf.Port, settings.Conf.UseTLS, settings.Conf.Debug)
 	err := client.Login(api.UserCredentials{Email: settings.Conf.Email, Name: settings.Conf.User, Password: settings.Conf.Password})
-	if err != nil {
-		log.Fatalf("login err: %s\n", err)
-	}
+	utils.AssertErrMsg(err, "login err: %s")
 
 	return client
 }
@@ -78,7 +83,7 @@ func GetConnectionSafe(config *settings.Config) error {
 func getChannelByName(name string) (*api.Channel, error) {
 	channels, err := client.Channel().List()
 	if err != nil {
-		log.Printf("ERROR: can't get channels list from server: %s\n", err)
+		logger.Error("Can't get channels list from server: %s", err)
 		return nil, err
 	}
 
@@ -95,7 +100,7 @@ func getChannelByName(name string) (*api.Channel, error) {
 func getGroupByName(name string) (*api.Group, error) {
 	groups, err := client.Groups().ListGroups()
 	if err != nil {
-		log.Printf("ERROR: can't get groups list from server: %s\n", err)
+		logger.Error("Can't get groups list from server: %s", err)
 		return nil, err
 	}
 
@@ -112,7 +117,7 @@ func getGroupByName(name string) (*api.Group, error) {
 func getUserByName(name string) (*api.User, error) {
 	users, err := client.Users().List()
 	if err != nil {
-		log.Printf("ERROR: can't get users list from server: %s\n", err)
+		logger.Error("Can't get users list from server: %s", err)
 		return nil, err
 	}
 
@@ -128,7 +133,7 @@ func getUserByName(name string) (*api.User, error) {
 func getUserByUsername(username string) (*api.User, error) {
 	users, err := client.Users().List()
 	if err != nil {
-		log.Printf("ERROR: can't get users list from server: %s\n", err)
+		logger.Error("Can't get users list from server: %s", err)
 		return nil, err
 	}
 
@@ -148,7 +153,7 @@ func getIDByName(name string) (string, error) {
 	case hashSign:
 		channel, err := getChannelByName(string([]rune(name)[1:]))
 		if err != nil {
-			log.Printf("ERROR: get channel id for name %s err: %s\n", name, err)
+			logger.Error("Get channel id for name %s err: %s", name, err)
 			return "", err
 		}
 		//log.Printf("Channel ID: %s\n", channel.ID)
@@ -157,7 +162,7 @@ func getIDByName(name string) (string, error) {
 	case lockSign:
 		group, err := getGroupByName(string([]rune(name)[1:]))
 		if err != nil {
-			log.Printf("ERROR: get group id for name %s err: %s\n", name, err)
+			logger.Error("Get group id for name %s err: %s", name, err)
 			return "", err
 		}
 		return group.ID, nil
@@ -165,7 +170,7 @@ func getIDByName(name string) (string, error) {
 	default:
 		user, err := getUserByName(name)
 		if err != nil {
-			log.Printf("ERROR: get user id for name %s err: %s\n", name, err)
+			logger.Error("Get user id for name %s err: %s", name, err)
 			return "", err
 		}
 		return user.ID, nil
@@ -181,7 +186,7 @@ func GetRIDByName(name string) (string, error) {
 	case hashSign:
 		channel, err := getChannelByName(string([]rune(name)[1:]))
 		if err != nil {
-			log.Printf("ERROR: get channel id for name %s err: %s\n", name, err)
+			logger.Error("Get channel id for name %s err: %s", name, err)
 			return "", err
 		}
 		//log.Printf("Channel ID: %s\n", channel.ID)
@@ -190,7 +195,7 @@ func GetRIDByName(name string) (string, error) {
 	case lockSign:
 		group, err := getGroupByName(string([]rune(name)[1:]))
 		if err != nil {
-			log.Printf("ERROR: get group id for name %s err: %s\n", name, err)
+			logger.Error("Get group id for name %s err: %s", name, err)
 			return "", err
 		}
 		return group.ID, nil
@@ -198,7 +203,7 @@ func GetRIDByName(name string) (string, error) {
 	default:
 		user, err := getUserByName(name)
 		if err != nil {
-			log.Printf("ERROR: get user id for name %s err: %s\n", name, err)
+			logger.Error("Get user id for name %s err: %s", name, err)
 			return "", err
 		}
 		return model.Chat.GetMe().User.ID + user.ID, nil
@@ -215,24 +220,19 @@ func getHistoryByName(name string) ([]api.Message, error) {
 
 //deprecated TODO: delete?
 func postByNameREST(name string, text string) {
-	_, err := client.Chat().Post(&rest.ChatPostOptions{Channel: model.Chat.ActiveContactId, Text: text})
-	if err != nil {
-		if settings.Conf.Debug {
-			log.Printf("send message err: %s\n", err)
-		}
-	}
+	_, _ = client.Chat().Post(&rest.ChatPostOptions{Channel: model.Chat.ActiveContactId, Text: text})
 }
 
 func PostByNameRT(name string, text string) {
 	roomID, err := GetRIDByName(name)
 	if err != nil {
-		log.Printf("can't get room by name %s: %s\n", name, err)
+		logger.Error("Can't get room by name %s: %s", name, err)
 		return
 	}
 	room := api.Channel{ID: model.Chat.ActiveContactId}
 	_, err = clientRT.SendMessage(&room, text)
 	if err != nil {
-		log.Printf("send message (to: %s[%s], text: %s) err: %s\n", name, roomID, text, err)
+		logger.Error("Send message (to: %s[%s], text: %s) err: %s", name, roomID, text, err)
 	}
 }
 
@@ -241,7 +241,6 @@ func OwnMessage(msg api.Message) bool {
 }
 
 func getNewMessages(c *rest.Client) []api.Message {
-
 	var result []api.Message
 
 	channels, _ := c.Channel().List()
@@ -252,7 +251,7 @@ func getNewMessages(c *rest.Client) []api.Message {
 		}
 		msgs, err := c.Channel().History(&rest.HistoryOptions{RoomID: channel.ID, Oldest: lastTime})
 		if err != nil {
-			log.Printf("ERROR: get messages from channel %s err: %s\n", channel.Name, err)
+			logger.Error("Get messages from channel %s err: %s", channel.Name, err)
 		} else {
 			if len(msgs) != 0 {
 				chat, ok := allHistory[channel.ID]
@@ -276,7 +275,7 @@ func getNewMessages(c *rest.Client) []api.Message {
 		}
 		msgs, err := c.Groups().History(&rest.HistoryOptions{RoomID: group.ID, Oldest: lastTime})
 		if err != nil {
-			log.Printf("ERROR: get messages from group %s err: %s\n", group.Name, err)
+			logger.Error("Get messages from group %s err: %s", group.Name, err)
 		} else {
 			if len(msgs) != 0 {
 				chat, ok := allHistory[group.ID]
@@ -300,7 +299,7 @@ func getNewMessages(c *rest.Client) []api.Message {
 		}
 		msgs, err := c.Im().History(&rest.HistoryOptions{RoomID: user.ID, Oldest: lastTime})
 		if err != nil {
-			log.Printf("ERROR: get messages from IMs err: %s\n", err)
+			logger.Error("Get messages from IMs err: %s", err)
 		} else {
 			if len(msgs) != 0 {
 				chat, ok := allHistory[user.ID]
@@ -322,7 +321,7 @@ func getNewMessages(c *rest.Client) []api.Message {
 func GetHistoryByID(id string) ([]api.Message, error) {
 	msgs, err := clientRT.LoadHistory(&realtime.HistoryOptions{RoomID: id})
 	if err != nil {
-		log.Printf("ERROR: get messages for room with id (%s) err: %s\n", id, err)
+		logger.Error("Get messages for room with id (%s) err: %s", id, err)
 		return nil, err
 	}
 
@@ -330,7 +329,6 @@ func GetHistoryByID(id string) ([]api.Message, error) {
 }
 
 func getNewMessagesRT(c *realtime.Client) []api.Message {
-
 	var result []api.Message
 
 	for _, channel := range model.Chat.Channels {
@@ -340,7 +338,7 @@ func getNewMessagesRT(c *realtime.Client) []api.Message {
 		}*/
 		msgs, err := c.LoadHistory(&realtime.HistoryOptions{RoomID: channel.Channel.ID})
 		if err != nil {
-			log.Printf("ERROR: get messages from channel %s err: %s\n", channel.Channel.Name, err)
+			logger.Error("Get messages from channel %s err: %s", channel.Channel.Name, err)
 		} else {
 			if len(msgs) != 0 {
 				chat, ok := allHistory[channel.Channel.ID]
@@ -363,7 +361,7 @@ func getNewMessagesRT(c *realtime.Client) []api.Message {
 		}*/
 		msgs, err := c.LoadHistory(&realtime.HistoryOptions{RoomID: group.Group.ID})
 		if err != nil {
-			log.Printf("ERROR: get messages from group %s err: %s\n", group.Group.Name, err)
+			logger.Error("Get messages from group %s err: %s", group.Group.Name, err)
 		} else {
 			if len(msgs) != 0 {
 				chat, ok := allHistory[group.Group.ID]
@@ -386,7 +384,7 @@ func getNewMessagesRT(c *realtime.Client) []api.Message {
 		}*/
 		msgs, err := c.LoadHistory(&realtime.HistoryOptions{RoomID: user.User.ID})
 		if err != nil {
-			log.Printf("ERROR: get messages from IMs err: %s\n", err)
+			logger.Error("Get messages from IMs err: %s", err)
 		} else {
 			if len(msgs) != 0 {
 				chat, ok := allHistory[user.User.ID]
@@ -411,9 +409,7 @@ Stay active for changes. Use subscribers to get them
 */
 func loadContactListAsync() {
 	db, err := bolt.Open("data.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
-	if err != nil {
-		log.Fatal(err)
-	}
+	utils.AssertErr(err)
 
 	db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte("cache"))
@@ -453,8 +449,8 @@ func subscribeToMessages() {
 
 	go func() {
 		for msg := range msgChan {
-			log.Printf("CurrentChatID: %s\n", model.Chat.ActiveContactId)
-			log.Printf("Incoming message: %+v\n", msg)
+			logger.Debug("CurrentChatID: %s", model.Chat.ActiveContactId)
+			logger.Debug("Incoming message: %+v", msg)
 
 			model.Chat.AddMessage(msg)
 			bus.Pub(bus.Messages_new, msg)
@@ -467,7 +463,7 @@ func loadUsers() {
 	if err == nil {
 		bus.Pub(bus.Rocket_users_load, restUsers)
 	} else {
-		log.Printf("Can't get users: %s\n", err)
+		logger.Error("Can't get users: %s", err)
 	}
 }
 
@@ -476,7 +472,7 @@ func loadChannels() {
 	if err == nil {
 		bus.Pub(bus.Rocket_channels_load, restChannels)
 	} else {
-		log.Printf("Can't get channels: %s\n", err)
+		logger.Error("Can't get channels: %s", err)
 	}
 }
 
@@ -485,6 +481,6 @@ func loadGroups() {
 	if err == nil {
 		bus.Pub(bus.Rocket_groups_load, restGroups)
 	} else {
-		log.Printf("Can't get groups: %s\n", err)
+		logger.Error("Can't get groups: %s", err)
 	}
 }

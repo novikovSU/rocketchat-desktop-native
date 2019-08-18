@@ -1,21 +1,36 @@
 package utils
 
-import "log"
+import (
+	"os"
+
+	log "github.com/chaykin/log4go"
+)
+
+var (
+	logger *log.Filter
+)
+
+func init() {
+	logger = CreateLogger("main")
+}
 
 func AssertErr(err error) {
 	if err != nil {
-		log.Fatal(err)
+		logger.Critical(err)
+		os.Exit(1)
 	}
 }
 
 func AssertErrMsg(err error, msg string) {
 	if err != nil {
-		log.Fatalf(msg, err)
+		logger.Critical(msg, err)
+		os.Exit(1)
 	}
 }
 
 func Safe(obj interface{}, err error) {
 	if err != nil {
-		log.Panicf("Could not perform operation on object %s. Cause: %s\n", obj, err)
+		logger.Critical("Could not perform operation on object %s. Cause: %s\n", obj, err)
+		os.Exit(1)
 	}
 }

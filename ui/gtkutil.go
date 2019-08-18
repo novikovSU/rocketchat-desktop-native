@@ -1,17 +1,16 @@
 package ui
 
 import (
-	"log"
-
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+
+	"github.com/novikovSU/rocketchat-desktop-native/utils"
 )
 
 func GetTextViewBuffer(tv *gtk.TextView) *gtk.TextBuffer {
 	buf, err := tv.GetBuffer()
-	if err != nil {
-		log.Panic(err)
-	}
+	utils.AssertErr(err)
+
 	return buf
 }
 
@@ -53,9 +52,7 @@ func GetScrolledWindow(name string) *gtk.ScrolledWindow {
 
 func getGtkObjectSafe(name string) *glib.IObject {
 	obj, err := GtkBuilder.GetObject(name)
-	if err != nil {
-		log.Panic(err)
-	}
+	utils.AssertErr(err)
 
 	return &obj
 }

@@ -1,11 +1,12 @@
 package main
 
 import (
-	"log"
 	"os"
 
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+
+	log "github.com/chaykin/log4go"
 
 	cfg "github.com/novikovSU/rocketchat-desktop-native/config"
 	"github.com/novikovSU/rocketchat-desktop-native/model"
@@ -18,6 +19,8 @@ import (
 var (
 	GtkApplication *gtk.Application
 	MainWindow     *gtk.Window
+
+	logger *log.Filter
 )
 
 //deprecated
@@ -29,35 +32,33 @@ func onChanged(selection *gtk.TreeSelection, label *gtk.Label) {
 
 	if ok {
 		value, err := model.(*gtk.TreeModel).GetValue(iter, 0)
-		if err != nil {
-			log.Fatal(err)
-		}
+		utils.AssertErr(err)
 
 		text, err := value.GetString()
-		if err != nil {
-			log.Fatal(err)
-		}
+		utils.AssertErr(err)
 
 		label.SetText(text)
 	}
 }
 
+func init() {
+	logger = utils.CreateLogger("main")
+}
+
 func main() {
 	// Create a new application.
 	app, err := gtk.ApplicationNew(cfg.AppID, glib.APPLICATION_FLAGS_NONE)
-	if err != nil {
-		log.Panic(err)
-	}
+	utils.AssertErr(err)
 	GtkApplication = app
 
 	// Connect function to application startup event, this is not required.
 	utils.Safe(app.Connect("startup", func() {
-		log.Println("application startup")
+		logger.Trace("application startup")
 	}))
 
 	// Connect function to application activate event
 	utils.Safe(app.Connect("activate", func() {
-		log.Println("application activate")
+		logger.Trace("application activate")
 
 		ui.InitUI(app)
 
@@ -81,7 +82,7 @@ func main() {
 
 	// Connect function to application shutdown event, this is not required.
 	utils.Safe(app.Connect("shutdown", func() {
-		log.Println("application shutdown")
+		logger.Trace("application shutdown")
 	}))
 
 	// Launch the application

@@ -1,0 +1,39 @@
+{
+  "console": [
+    {
+      "enable": true,
+      "level": "FINE",
+      "category": "main"
+    },
+    {
+      "enable": true,
+      "level": "DEBUG",
+      "category": "bus"
+    },
+    {
+      "enable": true,
+      "level": "FINE",
+      "category": "model"
+    },
+    {
+      "enable": true,
+      "level": "DEBUG",
+      "category": "rocket"
+    },
+    {
+      "enable": true,
+      "level": "FINE",
+      "category": "settings"
+    },
+    {
+      "enable": true,
+      "level": "FINE",
+      "category": "ui"
+    },
+    {
+      "enable": true,
+      "level": "FINE",
+      "category": "utils"
+    }
+  ]
+}

@@ -1,7 +1,6 @@
 package model
 
 import (
-	"log"
 	"strings"
 	"sync"
 
@@ -29,9 +28,7 @@ func (chat *ChatModel) GetMe() *UserModel {
 	if chat.me == nil {
 		meMutex.Lock()
 		if chat.me == nil {
-			log.Println("WAITING START...")
 			meCond.Wait()
-			log.Println("WAITING END...")
 		}
 		meMutex.Unlock()
 	}

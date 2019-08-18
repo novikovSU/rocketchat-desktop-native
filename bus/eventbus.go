@@ -1,10 +1,12 @@
 package bus
 
 import (
-	"log"
-
+	"fmt"
 	"github.com/asaskevich/EventBus"
-	"github.com/novikovSU/rocketchat-desktop-native/config"
+
+	log "github.com/chaykin/log4go"
+
+	"github.com/novikovSU/rocketchat-desktop-native/utils"
 )
 
 const (
@@ -100,20 +102,27 @@ const (
 
 var (
 	b = EventBus.New()
+
+	logger *log.Filter
 )
 
 // Pub AAA
 func Pub(topic string, args ...interface{}) {
-	if config.Debug {
-		log.Printf("Fire event: %s %s\n", topic, args)
+	if logger.Level <= log.FINE {
+		logger.Fine("Fire event: %s %s", topic, args)
+	} else {
+		logger.Debug("Fire event: %s", topic)
 	}
+
 	b.Publish(topic, args...)
 }
 
 // Sub AAA
 func Sub(topic string, fn interface{}) {
 	err := b.SubscribeAsync(topic, fn, false)
-	if err != nil {
-		log.Panicf("Invalid argument %s. It must be a function!: %s\n", fn, err)
-	}
+	utils.AssertErrMsg(err, fmt.Sprintf("Invalid argument %s. It must be a function!", fn)+"%s")
+}
+
+func init() {
+	logger = utils.CreateLogger("bus")
 }

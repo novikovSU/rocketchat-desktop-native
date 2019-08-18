@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"log"
 	"os"
+
+	"github.com/novikovSU/rocketchat-desktop-native/utils"
 )
 
 // Config -- AAA
@@ -37,14 +38,10 @@ func GetConfig(params ...string) (*Config, error) {
 	}
 
 	b, err := ioutil.ReadFile(settingsFile)
-	if err != nil {
-		log.Fatalf("Failed to read config file: %s\n", err)
-	}
+	utils.AssertErrMsg(err, "Failed to read config file: %s\n")
 
 	err = json.Unmarshal(b, &config)
-	if err != nil {
-		log.Fatalf("Failed to unmarshal file: %s\n", err)
-	}
+	utils.AssertErrMsg(err, "Failed to unmarshal file: %s\n")
 
 	return &config, nil
 }

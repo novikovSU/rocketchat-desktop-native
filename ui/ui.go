@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 
@@ -10,9 +9,10 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/gotk3/pango"
 
+	log "github.com/chaykin/log4go"
+
 	"github.com/novikovSU/gorocket/api"
 	"github.com/novikovSU/rocketchat-desktop-native/bus"
-	"github.com/novikovSU/rocketchat-desktop-native/config"
 	"github.com/novikovSU/rocketchat-desktop-native/model"
 	"github.com/novikovSU/rocketchat-desktop-native/rocket"
 	"github.com/novikovSU/rocketchat-desktop-native/utils"
@@ -21,6 +21,8 @@ import (
 var (
 	GtkBuilder     gtk.Builder
 	gtkApplication *gtk.Application
+
+	logger *log.Filter
 )
 
 func InitUI(app *gtk.Application) {
@@ -30,12 +32,13 @@ func InitUI(app *gtk.Application) {
 	SendNotification("Rocket.Chat Desktop native", "application activated")
 }
 
+func init() {
+	logger = utils.CreateLogger("ui")
+}
 func createGtkBuilder() *gtk.Builder {
 	// Get the GtkBuilder UI definition in the glade file.
 	builder, err := gtk.BuilderNewFromFile("main.glade")
-	if err != nil {
-		log.Panic(err)
-	}
+	utils.AssertErr(err)
 
 	// Map the handlers to callback functions, and connect the signals to the Builder.
 	signals := map[string]interface{}{
@@ -75,7 +78,7 @@ func createListStore(types ...glib.Type) *gtk.ListStore {
 // on_main_window_destroy handler. It is not required to map this,
 // and is here to simply demo how to hook-up custom callbacks.
 func onMainWindowDestroy() {
-	log.Println("onMainWindowDestroy")
+	logger.Trace("onMainWindowDestroy")
 }
 
 /*
@@ -88,9 +91,8 @@ func CreateWindow(id string) *gtk.Window {
 	_, err := wndCloseAction.Connect("activate", func() {
 		wnd.Close()
 	})
-	if err != nil {
-		log.Panicf("Can't add close action to window %s. Cause: %s\n", id, err)
-	}
+	utils.AssertErrMsg(err, fmt.Sprintf("Can't add close action to window %s. Cause: ", id)+"%s")
+
 	gtkApplication.AddAction(wndCloseAction)
 
 	return wnd
@@ -167,9 +169,7 @@ func InitSubscribers() {
 	})
 
 	bus.Sub(bus.Messages_new, func(msg api.Message) {
-		if config.Debug {
-			log.Printf("DEBUG: Prepare to notificate")
-		}
+		logger.Debug("Prepare to notificate")
 		if rocket.OwnMessage(msg) {
 			return
 		}

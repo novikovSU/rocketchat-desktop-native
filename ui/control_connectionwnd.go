@@ -1,13 +1,12 @@
 package ui
 
 import (
-	"log"
-
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 
 	"github.com/novikovSU/rocketchat-desktop-native/rocket"
 	"github.com/novikovSU/rocketchat-desktop-native/settings"
+	"github.com/novikovSU/rocketchat-desktop-native/utils"
 )
 
 func OpenConnectionWindow(app *gtk.Application) {
@@ -15,10 +14,10 @@ func OpenConnectionWindow(app *gtk.Application) {
 
 	okBtn := GetGtkButton("connection_ok_button")
 	_, _ = okBtn.Connect("clicked", func() {
-		log.Println("connection_ok_button clicked")
+		logger.Debug("connection_ok_button clicked")
 		newConf := createConfig()
 		if testConfig(newConf) {
-			log.Println("connection settings are correct")
+			logger.Debug("connection settings are correct")
 
 			settings.Conf = newConf
 			settings.StoreConfig(settings.Conf)
@@ -26,7 +25,7 @@ func OpenConnectionWindow(app *gtk.Application) {
 
 			wnd.Close()
 		} else {
-			log.Println("connection settings are incorrect!")
+			logger.Debug("connection settings are incorrect!")
 			//TODO
 		}
 	})
@@ -37,9 +36,7 @@ func OpenConnectionWindow(app *gtk.Application) {
 
 func createModal(app *gtk.Application, id string) *gtk.Dialog {
 	obj, err := GtkBuilder.GetObject(id)
-	if err != nil {
-		log.Panic(err)
-	}
+	utils.AssertErr(err)
 
 	wnd := obj.(*gtk.Dialog)
 
