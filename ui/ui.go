@@ -130,7 +130,9 @@ func InitSubscribers() {
 
 	bus.Sub(bus.Messages_new, func(msg api.Message) {
 		cs := chatStore
-		if msg.ChannelID == model.Chat.ActiveContactId || msg.ChannelID == rocket.Me.ID+model.Chat.ActiveContactId {
+
+		meId := model.Chat.GetMe().User.ID
+		if msg.ChannelID == model.Chat.ActiveContactId || msg.ChannelID == meId+model.Chat.ActiveContactId {
 			text := strings.Replace(msg.Text, "&nbsp;", "", -1)
 			text = strings.Replace(text, "<", "", -1)
 			text = strings.Replace(text, ">", "", -1)
@@ -140,7 +142,7 @@ func InitSubscribers() {
 		}
 
 		//TODO create function for get contactId by message
-		model := model.Chat.GetModelById(strings.Replace(msg.ChannelID, rocket.Me.ID, "", 1))
+		model := model.Chat.GetModelById(strings.Replace(msg.ChannelID, meId, "", 1))
 		if model != nil {
 			iter, exists := contactsStore.GetIterFirst()
 			if exists {

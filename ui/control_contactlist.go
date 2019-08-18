@@ -52,7 +52,8 @@ func createContactListTreeView() (*gtk.TreeView, *gtk.ListStore) {
 func clearContactUnreadCount(cs *gtk.ListStore, name string) {
 	currID, _ := rocket.GetRIDByName(name)
 
-	mdl := model.Chat.GetModelById(strings.Replace(currID, rocket.Me.ID, "", 1))
+	meId := model.Chat.GetMe().User.ID
+	mdl := model.Chat.GetModelById(strings.Replace(currID, meId, "", 1))
 	mdl.ClearUnreadCount()
 
 	if mdl != nil {

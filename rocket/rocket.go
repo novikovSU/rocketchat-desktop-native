@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/novikovSU/rocketchat-desktop-native/settings"
 	"log"
-	"strings"
 	"time"
 
 	bolt "go.etcd.io/bbolt"
@@ -32,7 +31,6 @@ var (
 	clientRT *realtime.Client
 	msgChan  []api.Message
 
-	Me         *api.User
 	allHistory map[string]chatHistory
 	pullChan   chan api.Message
 )
@@ -45,7 +43,6 @@ type chatHistory struct {
 func InitRocket() {
 	client = initRESTConnection()
 	clientRT = initRTConnection()
-	Me = getSelfInfo()
 	loadContactListAsync()
 	subscribeToMessages()
 }
@@ -69,15 +66,6 @@ func initRTConnection() *realtime.Client {
 	client.Login(&api.UserCredentials{Email: settings.Conf.Email, Name: settings.Conf.User, Password: settings.Conf.Password})
 
 	return client
-}
-
-func getSelfInfo() *api.User {
-	user, err := getUserByUsername(settings.Conf.User)
-	if err != nil {
-		log.Printf("can't get self info: %s\n", err)
-	}
-
-	return user
 }
 
 //deprecated
@@ -213,7 +201,7 @@ func GetRIDByName(name string) (string, error) {
 			log.Printf("ERROR: get user id for name %s err: %s\n", name, err)
 			return "", err
 		}
-		return Me.ID + user.ID, nil
+		return model.Chat.GetMe().User.ID + user.ID, nil
 	}
 	//	return "", nil
 }
@@ -249,7 +237,7 @@ func PostByNameRT(name string, text string) {
 }
 
 func OwnMessage(msg api.Message) bool {
-	return Me.ID == msg.User.ID
+	return model.Chat.GetMe().User.ID == msg.User.ID
 }
 
 func getNewMessages(c *rest.Client) []api.Message {
@@ -459,18 +447,16 @@ func subscribeToMessages() {
 
 	// Subscribe to message stream
 	allMessages := api.Channel{ID: "__my_messages__"}
+
+	//TODO handle errors
 	msgChan, _ = clientRT.SubscribeToMessageStream(&allMessages)
 
 	go func() {
-		var msg api.Message
-
-		for {
-			msg = <-msgChan
-
+		for msg := range msgChan {
 			log.Printf("CurrentChatID: %s\n", model.Chat.ActiveContactId)
 			log.Printf("Incoming message: %+v\n", msg)
 
-			model.Chat.AddMessage(msg, Me)
+			model.Chat.AddMessage(msg)
 			bus.Pub(bus.Messages_new, msg)
 		}
 	}()
@@ -478,95 +464,27 @@ func subscribeToMessages() {
 
 func loadUsers() {
 	restUsers, err := client.Users().List()
-	if err != nil {
+	if err == nil {
+		bus.Pub(bus.Rocket_users_load, restUsers)
+	} else {
 		log.Printf("Can't get users: %s\n", err)
-	}
-
-	for _, existsUser := range model.Chat.Users {
-		if !containsUser(&restUsers, existsUser) {
-			model.Chat.RemoveUser(existsUser.User)
-			bus.Pub(bus.Contacts_users_removed, existsUser.User)
-		}
-	}
-
-	for _, restUser := range restUsers {
-		if model.Chat.AddUser(restUser) {
-			bus.Pub(bus.Contacts_users_added, restUser)
-		}
 	}
 }
 
 func loadChannels() {
 	restChannels, err := client.Channel().List()
-	if err != nil {
+	if err == nil {
+		bus.Pub(bus.Rocket_channels_load, restChannels)
+	} else {
 		log.Printf("Can't get channels: %s\n", err)
-	}
-
-	for _, existsChannel := range model.Chat.Channels {
-		if !containsChannel(&restChannels, existsChannel) {
-			model.Chat.RemoveChannel(existsChannel.Channel)
-			bus.Pub(bus.Contacts_channels_removed, existsChannel.Channel)
-		}
-	}
-
-	for _, restChannel := range restChannels {
-		if model.Chat.AddChannel(restChannel) {
-			bus.Pub(bus.Contacts_channels_added, restChannel)
-		}
 	}
 }
 
 func loadGroups() {
 	restGroups, err := client.Groups().ListGroups()
-	if err != nil {
+	if err == nil {
+		bus.Pub(bus.Rocket_groups_load, restGroups)
+	} else {
 		log.Printf("Can't get groups: %s\n", err)
 	}
-
-	for _, existsGroup := range model.Chat.Groups {
-		if !containsGroup(&restGroups, existsGroup) {
-			model.Chat.RemoveGroup(existsGroup.Group)
-			bus.Pub(bus.Contacts_groups_removed, existsGroup.Group)
-		}
-	}
-
-	for _, restGroup := range restGroups {
-		if model.Chat.AddGroup(restGroup) {
-			bus.Pub(bus.Contacts_groups_added, restGroup)
-		}
-	}
-}
-
-/*---------------------------------------------------------------------------
-Very common and dummy functions
-TODO codgen?
----------------------------------------------------------------------------*/
-
-func containsUser(users *[]api.User, cmpUser *model.UserModel) bool {
-	for _, user := range *users {
-		if strings.Compare(user.ID, cmpUser.User.ID) == 0 {
-			return true
-		}
-
-	}
-	return false
-}
-
-func containsChannel(channels *[]api.Channel, cmpChannel *model.ChannelModel) bool {
-	for _, channel := range *channels {
-		if strings.Compare(channel.ID, cmpChannel.Channel.ID) == 0 {
-			return true
-		}
-
-	}
-	return false
-}
-
-func containsGroup(groups *[]api.Group, cmpGroup *model.GroupModel) bool {
-	for _, group := range *groups {
-		if strings.Compare(group.ID, cmpGroup.Group.ID) == 0 {
-			return true
-		}
-
-	}
-	return false
 }

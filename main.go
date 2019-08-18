@@ -8,6 +8,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 
 	cfg "github.com/novikovSU/rocketchat-desktop-native/config"
+	"github.com/novikovSU/rocketchat-desktop-native/model"
 	"github.com/novikovSU/rocketchat-desktop-native/rocket"
 	"github.com/novikovSU/rocketchat-desktop-native/settings"
 	"github.com/novikovSU/rocketchat-desktop-native/ui"
@@ -69,6 +70,7 @@ func main() {
 			ui.OpenConnectionWindow(app)
 		}
 
+		model.Init(settings.Conf.User)
 		ui.InitSubscribers()
 
 		// Get Rocket.Chat connection

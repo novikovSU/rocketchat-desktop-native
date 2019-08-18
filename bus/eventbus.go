@@ -9,8 +9,34 @@ import (
 
 const (
 	/*
+		Fires then new chat message is received by rocket package
+		args: api.Message
+	*/
+	Rocket_messages_new = "rocket.messages.new"
+
+	/*
+		Fires then users is loaded by rocket package
+		args: []api.User
+	*/
+	Rocket_users_load = "rocket.users.load"
+
+	/*
+		Fires then channels is loaded by rocket package
+		args: []api.Channel
+	*/
+	Rocket_channels_load = "rocket.channels.load"
+
+	/*
+		Fires then groups is loaded by rocket package
+		args: []api.Group
+	*/
+	Rocket_groups_load = "rocket.groups.load"
+
+	/*
 		Fires then application received new chat message
 		args: api.Message
+
+		deprecated
 	*/
 	Messages_new = "messages.new"
 
@@ -31,40 +57,40 @@ const (
 	Contacts_update_finished = "contacts.update.finished"
 
 	/*
-		Fires then application detects new user has been added to server
-		args: api.User
+		Fires then user adds to model
+		args: model.ChatModel, model.UserModel
 	*/
-	Contacts_users_added = "contacts.users.added"
+	Model_user_added = "model.user.added"
 
 	/*
-		Fires then application detects existing user has been removed from server
-		args: api.User
+		Fires then user removes from model
+		args: model.ChatModel, model.UserModel
 	*/
-	Contacts_users_removed = "contacts.users.removed"
+	Model_user_removed = "model.user.removed"
 
 	/*
-		Fires then application detects new channel has been added to server
-		args: api.Channel
+		Fires then channel adds to model
+		args: model.ChatModel, model.ChannelModel
 	*/
-	Contacts_channels_added = "contacts.channels.added"
+	Model_channel_added = "model.channel.added"
 
 	/*
-		Fires then application detects existing channel has been removed from server
-		args: api.Channel
+		Fires then channel removes from model
+		args: model.ChatModel, model.ChannelModel
 	*/
-	Contacts_channels_removed = "contacts.channels.removed"
+	Model_channel_removed = "model.channel.removed"
 
 	/*
-		Fires then application detects new group has been added to server
-		args: api.Group
+		Fires then group adds to model
+		args: model.ChatModel, model.GroupModel
 	*/
-	Contacts_groups_added = "contacts.groups.added"
+	Model_group_added = "model.group.added"
 
-	/**
-	Fires then application detects existing group has been removed from server
-	args: api.Group
+	/*
+		Fires then group removes from model
+		args: model.ChatModel, model.GroupModel
 	*/
-	Contacts_groups_removed = "contacts.groups.removed"
+	Model_group_removed = "model.group.removed"
 
 	/*
 		Fires then user click on main window close button (Not implemented yet)
