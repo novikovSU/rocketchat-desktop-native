@@ -26,7 +26,7 @@ func (ch *ChannelModel) GetUnreadCount() int {
 	return ch.UnreadCount
 }
 
-func (ch *ChannelModel) UpdateUnreadCount(change int) {
+func (ch *ChannelModel) updateUnreadCount(change int) {
 	ch.UnreadCount += change
 }
 

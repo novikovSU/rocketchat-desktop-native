@@ -86,13 +86,20 @@ func (chat *ChatModel) ClearUnreadCount(id string) {
 	model.ClearUnreadCount()
 }
 
-func (chat *ChatModel) AddMessage(msg api.Message) {
+func (chat *ChatModel) GetSenderId(msg *api.Message) string {
 	meId := chat.GetMe().User.ID
-	model := chat.GetModelById(strings.Replace(msg.ChannelID, meId, "", 1))
+	return strings.Replace(msg.ChannelID, meId, "", 1)
+}
+
+func (chat *ChatModel) addMessage(msg api.Message) {
+	model := chat.GetModelById(chat.GetSenderId(&msg))
 	if model != nil {
 		//TODO handle activeContactId
 		// add to model variable: type. It should means strategy of unread count: differs when chat window visible or hide
-		model.UpdateUnreadCount(1)
+		model.updateUnreadCount(1)
+
+		bus.Pub(bus.Model_unreadCounters_updated, chat, model.GetId())
+		bus.Pub(bus.Model_messages_received, chat, model.GetId(), msg)
 	}
 }
 

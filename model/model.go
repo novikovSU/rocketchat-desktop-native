@@ -10,4 +10,5 @@ func Init(meUserName string) {
 	bus.Sub(bus.Rocket_users_load, Chat.loadUsers)
 	bus.Sub(bus.Rocket_channels_load, Chat.loadChannels)
 	bus.Sub(bus.Rocket_groups_load, Chat.loadGroups)
+	bus.Sub(bus.Rocket_messages_new, Chat.addMessage)
 }

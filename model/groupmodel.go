@@ -26,7 +26,7 @@ func (g *GroupModel) GetUnreadCount() int {
 	return g.UnreadCount
 }
 
-func (g *GroupModel) UpdateUnreadCount(change int) {
+func (g *GroupModel) updateUnreadCount(change int) {
 	g.UnreadCount += change
 }
 

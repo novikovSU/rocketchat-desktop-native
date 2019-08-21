@@ -17,6 +17,18 @@ const (
 	Rocket_messages_new = "rocket.messages.new"
 
 	/*
+		Fires then new chat message is received by model package
+		args: chat model.ChatModel, modelId string, msg api.Message
+	*/
+	Model_messages_received = "model.messages.received"
+
+	/*
+		Fires then unread counter for model updated (set or cleared)
+		args: chat model.ChatModel, modelId string
+	*/
+	Model_unreadCounters_updated = "model.unread_counters.updated"
+
+	/*
 		Fires then users is loaded by rocket package
 		args: []api.User
 	*/
@@ -33,14 +45,6 @@ const (
 		args: []api.Group
 	*/
 	Rocket_groups_load = "rocket.groups.load"
-
-	/*
-		Fires then application received new chat message
-		args: api.Message
-
-		deprecated
-	*/
-	Messages_new = "messages.new"
 
 	/*
 		Fires then user read the chat message (Not implemented yet)

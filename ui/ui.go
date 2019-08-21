@@ -130,56 +130,9 @@ func InitSubscribers() {
 		addContactsToList(cs, getSortedUsers())
 	})
 
-	bus.Sub(bus.Messages_new, func(msg api.Message) {
-		cs := chatStore
-
-		meId := model.Chat.GetMe().User.ID
-		if msg.ChannelID == model.Chat.ActiveContactId || msg.ChannelID == meId+model.Chat.ActiveContactId {
-			text := strings.Replace(msg.Text, "&nbsp;", "", -1)
-			text = strings.Replace(text, "<", "", -1)
-			text = strings.Replace(text, ">", "", -1)
-			//log.Printf("Text: %s\n", text)
-			text = fmt.Sprintf("<b>%s</b> <i>%s</i>\n%s", msg.User.Name, msg.Timestamp.Format("2006-01-02 15:04:05"), text)
-			addToList(cs, text)
-		}
-
-		//TODO create function for get contactId by message
-		model := model.Chat.GetModelById(strings.Replace(msg.ChannelID, meId, "", 1))
-		if model != nil {
-			iter, exists := contactsStore.GetIterFirst()
-			if exists {
-				for {
-					val, err := contactsStore.GetValue(iter, ContactListNameColumn)
-					if err == nil {
-						strVal, err := val.GetString()
-						if err == nil {
-							if strings.Compare(strVal, model.String()) == 0 {
-								contactsStore.SetValue(iter, ContactListUnreadCountColumn, getUnreadCount(&model))
-								break
-							} else {
-								if !contactsStore.IterNext(iter) {
-									break
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	})
-
-	bus.Sub(bus.Messages_new, func(msg api.Message) {
-		logger.Debug("Prepare to notificate")
-		if rocket.OwnMessage(msg) {
-			return
-		}
-		if mainWindowIsFocused && msg.ChannelID == model.Chat.ActiveContactId {
-			return
-		}
-
-		notifTitle := fmt.Sprintf("%s (%s)", msg.User.Name, msg.User.UserName)
-		SendNotification(notifTitle, msg.Text)
-	})
+	bus.Sub(bus.Model_messages_received, onMessageReceived)
+	bus.Sub(bus.Model_messages_received, sendMessageReceivedNotification)
+	bus.Sub(bus.Model_unreadCounters_updated, onUnreadCounterUpdated)
 }
 
 func getSortedChannels() []model.IContactModel {
@@ -201,6 +154,52 @@ func getSortedUsers() []model.IContactModel {
 	sort.Sort(ContactsSorter(contacts))
 
 	return contacts
+}
+
+func onMessageReceived(chat *model.ChatModel, modelId string, msg api.Message) {
+	senderId := chat.GetSenderId(&msg)
+	if strings.Compare(senderId, chat.ActiveContactId) == 0 {
+		addTextMessageToActiveChat(&msg)
+	}
+}
+
+func sendMessageReceivedNotification(chat *model.ChatModel, modelId string, msg api.Message) {
+	logger.Debug("Prepare to notificate")
+	if rocket.OwnMessage(msg) {
+		return
+	}
+	if mainWindowIsFocused && msg.ChannelID == chat.ActiveContactId {
+		return
+	}
+
+	notifTitle := fmt.Sprintf("%s (%s)", msg.User.Name, msg.User.UserName)
+	SendNotification(notifTitle, msg.Text)
+}
+
+func addTextMessageToActiveChat(msg *api.Message) {
+	text := strings.Replace(msg.Text, "&nbsp;", "", -1)
+	text = strings.Replace(text, "<", "", -1)
+	text = strings.Replace(text, ">", "", -1)
+	text = fmt.Sprintf("<b>%s</b> <i>%s</i>\n%s", msg.User.Name, msg.Timestamp.Format("2006-01-02 15:04:05"), text)
+	addToList(chatStore, text)
+}
+
+func onUnreadCounterUpdated(chat *model.ChatModel, modelId string) {
+	contactModel := chat.GetModelById(modelId)
+	if contactModel != nil {
+		for iter, exists := contactsStore.GetIterFirst(); exists; exists = contactsStore.IterNext(iter) {
+			val, err := contactsStore.GetValue(iter, ContactListNameColumn)
+			utils.AssertErr(err)
+
+			strVal, err := val.GetString()
+			utils.AssertErr(err)
+
+			if strings.Compare(strVal, contactModel.String()) == 0 {
+				utils.AssertErr(contactsStore.SetValue(iter, ContactListUnreadCountColumn, getUnreadCount(&contactModel)))
+				break
+			}
+		}
+	}
 }
 
 func addContactsToList(cs *gtk.ListStore, contacts []model.IContactModel) {

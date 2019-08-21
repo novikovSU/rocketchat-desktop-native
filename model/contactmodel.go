@@ -10,6 +10,6 @@ type IContactModel interface {
 	GetName() string
 	String() string
 	GetUnreadCount() int
-	UpdateUnreadCount(change int)
+	updateUnreadCount(change int)
 	ClearUnreadCount()
 }

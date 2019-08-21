@@ -452,8 +452,7 @@ func subscribeToMessages() {
 			logger.Debug("CurrentChatID: %s", model.Chat.ActiveContactId)
 			logger.Debug("Incoming message: %+v", msg)
 
-			model.Chat.AddMessage(msg)
-			bus.Pub(bus.Messages_new, msg)
+			bus.Pub(bus.Rocket_messages_new, msg)
 		}
 	}()
 }

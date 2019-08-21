@@ -26,7 +26,7 @@ func (u *UserModel) GetUnreadCount() int {
 	return u.UnreadCount
 }
 
-func (u *UserModel) UpdateUnreadCount(change int) {
+func (u *UserModel) updateUnreadCount(change int) {
 	u.UnreadCount += change
 }
 
