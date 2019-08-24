@@ -120,7 +120,7 @@ func GetTreeViewSelectionVal(tv *gtk.TreeView, column int) string {
 }
 
 func InitSubscribers() {
-	bus.Sub(bus.Contacts_update_finished, func() {
+	bus.Sub(bus.Rocket_contacts_update_finished, func() {
 		//TODO react to remove users/groups/channels: if it happens, what should we do with selection, for example?
 		cs := contactsStore
 		cs.Clear()

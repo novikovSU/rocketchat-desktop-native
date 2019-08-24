@@ -427,11 +427,11 @@ func loadContactListAsync() {
 	*/
 	go func() {
 		for {
-			bus.Pub(bus.Contacts_update_started)
+			bus.Pub(bus.Rocket_contacts_update_started)
 			loadUsers()
 			loadChannels()
 			loadGroups()
-			bus.Pub(bus.Contacts_update_finished)
+			bus.Pub(bus.Rocket_contacts_update_finished)
 
 			time.Sleep(contactListUpdateInterval)
 		}

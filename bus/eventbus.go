@@ -11,24 +11,6 @@ import (
 
 const (
 	/*
-		Fires then new chat message is received by rocket package
-		args: api.Message
-	*/
-	Rocket_messages_new = "rocket.messages.new"
-
-	/*
-		Fires then new chat message is received by model package
-		args: chat model.ChatModel, modelId string, msg api.Message
-	*/
-	Model_messages_received = "model.messages.received"
-
-	/*
-		Fires then unread counter for model updated (set or cleared)
-		args: chat model.ChatModel, modelId string
-	*/
-	Model_unreadCounters_updated = "model.unread_counters.updated"
-
-	/*
 		Fires then users is loaded by rocket package
 		args: []api.User
 	*/
@@ -47,20 +29,20 @@ const (
 	Rocket_groups_load = "rocket.groups.load"
 
 	/*
-		Fires then user read the chat message (Not implemented yet)
-		args: api.Message
-	*/
-	Messages_read = "messages.read"
-
-	/*
 		Fires then application starts to load/update contact list
 	*/
-	Contacts_update_started = "contacts.update.started"
+	Rocket_contacts_update_started = "rocket.contacts.update_started"
 
 	/*
 		Fires then application finish to load/update contact list
 	*/
-	Contacts_update_finished = "contacts.update.finished"
+	Rocket_contacts_update_finished = "rocket.contacts.update_finished"
+
+	/*
+		Fires then new chat message is received by rocket package
+		args: api.Message
+	*/
+	Rocket_messages_new = "rocket.messages.new"
 
 	/*
 		Fires then user adds to model
@@ -97,6 +79,24 @@ const (
 		args: model.ChatModel, model.GroupModel
 	*/
 	Model_group_removed = "model.group.removed"
+
+	/*
+		Fires then new chat message is received by model package
+		args: chat model.ChatModel, modelId string, msg api.Message
+	*/
+	Model_messages_received = "model.messages.received"
+
+	/*
+		Fires then unread counter for model updated (set or cleared)
+		args: chat model.ChatModel, modelId string
+	*/
+	Model_unreadCounters_updated = "model.unread_counters.updated"
+
+	/*
+		Fires then user read the chat message (Not implemented yet)
+		args: api.Message
+	*/
+	Messages_read = "messages.read"
 
 	/*
 		Fires then user click on main window close button (Not implemented yet)
