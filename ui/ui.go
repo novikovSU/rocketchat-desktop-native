@@ -105,9 +105,9 @@ func GetTreeViewSelectionVal(tv *gtk.TreeView, column int) string {
 	selection, err := tv.GetSelection()
 	utils.AssertErr(err)
 
-	model, iter, ok := selection.GetSelected()
+	mdl, iter, ok := selection.GetSelected()
 	if ok {
-		value, err := model.(*gtk.TreeModel).GetValue(iter, column)
+		value, err := mdl.(*gtk.TreeModel).GetValue(iter, column)
 		utils.AssertErr(err)
 
 		val, err := value.GetString()
@@ -157,8 +157,7 @@ func getSortedUsers() []model.IContactModel {
 }
 
 func onMessageReceived(chat *model.ChatModel, modelId string, msg api.Message) {
-	senderId := chat.GetSenderId(&msg)
-	if strings.Compare(senderId, chat.ActiveContactId) == 0 {
+	if strings.Compare(msg.ChannelID, chat.ActiveContactId) == 0 {
 		addTextMessageToActiveChat(&msg)
 	}
 }

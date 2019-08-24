@@ -36,6 +36,11 @@ func (chat *ChatModel) GetMe() *UserModel {
 	return chat.me
 }
 
+func (chat *ChatModel) GetModelByName(name string) IContactModel {
+	id := chat.GetIdByName(name)
+	return chat.GetModelById(id)
+}
+
 func (chat *ChatModel) GetModelById(id string) IContactModel {
 	if model, exists := chat.Users[id]; exists {
 		return model
@@ -54,17 +59,10 @@ func (chat *ChatModel) GetModelById(id string) IContactModel {
 
 //TODO do we need to store total count as variable?
 func (chat *ChatModel) GetTotalUnreadCount() int {
+	models := chat.getAllModels()
 	count := 0
-	for _, user := range chat.Users {
-		count += user.UnreadCount
-	}
-
-	for _, user := range chat.Channels {
-		count += user.UnreadCount
-	}
-
-	for _, user := range chat.Groups {
-		count += user.UnreadCount
+	for _, mdl := range models {
+		count += mdl.GetUnreadCount()
 	}
 
 	return count
@@ -78,17 +76,30 @@ func (chat *ChatModel) GetUnreadCount(id string) int {
 	return model.GetUnreadCount()
 }
 
-func (chat *ChatModel) ClearUnreadCount(id string) {
+func (chat *ChatModel) clearUnreadCount(id string) {
 	model := chat.GetModelById(id)
 	if model == nil {
 		return
 	}
-	model.ClearUnreadCount()
+	model.clearUnreadCount()
+
+	bus.Pub(bus.Model_unreadCounters_updated, chat, model.GetId())
 }
 
 func (chat *ChatModel) GetSenderId(msg *api.Message) string {
 	meId := chat.GetMe().User.ID
 	return strings.Replace(msg.ChannelID, meId, "", 1)
+}
+
+func (chat *ChatModel) GetIdByName(name string) string {
+	models := chat.getAllModels()
+	for _, mdl := range models {
+		if strings.Compare(name, mdl.GetName()) == 0 {
+			return mdl.GetId()
+		}
+	}
+
+	return ""
 }
 
 func (chat *ChatModel) addMessage(msg api.Message) {
@@ -216,6 +227,15 @@ func (chat *ChatModel) removeGroup(gr api.Group) bool {
 	}
 
 	return false
+}
+
+func (chat *ChatModel) getAllModels() []IContactModel {
+	models := make([]IContactModel, 0, len(chat.Users)+len(chat.Channels)+len(chat.Groups))
+	models = append(models, GroupsMapToModels(chat.Groups)...)
+	models = append(models, ChannelsMapToModels(chat.Channels)...)
+	models = append(models, UsersMapToModels(chat.Users)...)
+
+	return models
 }
 
 func init() {

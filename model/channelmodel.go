@@ -30,7 +30,7 @@ func (ch *ChannelModel) updateUnreadCount(change int) {
 	ch.UnreadCount += change
 }
 
-func (ch *ChannelModel) ClearUnreadCount() {
+func (ch *ChannelModel) clearUnreadCount() {
 	ch.UnreadCount = 0
 }
 

@@ -11,5 +11,5 @@ type IContactModel interface {
 	String() string
 	GetUnreadCount() int
 	updateUnreadCount(change int)
-	ClearUnreadCount()
+	clearUnreadCount()
 }

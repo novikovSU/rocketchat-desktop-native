@@ -30,7 +30,7 @@ func (u *UserModel) updateUnreadCount(change int) {
 	u.UnreadCount += change
 }
 
-func (u *UserModel) ClearUnreadCount() {
+func (u *UserModel) clearUnreadCount() {
 	u.UnreadCount = 0
 }
 

@@ -30,7 +30,7 @@ func (g *GroupModel) updateUnreadCount(change int) {
 	g.UnreadCount += change
 }
 
-func (g *GroupModel) ClearUnreadCount() {
+func (g *GroupModel) clearUnreadCount() {
 	g.UnreadCount = 0
 }
 

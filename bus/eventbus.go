@@ -102,6 +102,12 @@ const (
 		Fires then user click on main window close button (Not implemented yet)
 	*/
 	Ui_mainwindow_closed = "ui.mainwindow.closed"
+
+	/*
+		Fires then contact is selected in contact-list by user
+		args: contactName string
+	*/
+	Ui_contacts_selected = "ui.contacts.selected"
 )
 
 var (

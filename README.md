@@ -24,3 +24,4 @@ Application has event-oriented architecture. First part in event name is package
 | model.unread_counters.updated   | model.ChatModel, string                           | Fires then unread counter for model updated (set or cleared)                 |
 | messages.read                   | api.Message                                       | Fires then user read the chat message **(Not implemented yet)**              |
 | ui.mainwindow.closed            |                                                   | Fires then user click on main window close button **(Not implemented yet)**  |
+| ui.contacts.selected            | string                                            | Fires then contact is selected in contact-list by user                       |
